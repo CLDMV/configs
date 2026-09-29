@@ -1,6 +1,6 @@
 {
 	"name": "@cldmv/configs",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "CLDMV's shared tool configurations, published as plain JSON files that CLDMV repos extend.",
 	"type": "module",
 	"license": "Apache-2.0",
