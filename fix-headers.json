@@ -1,0 +1,12 @@
+{
+	"includeFolders": ["."],
+	"useGpgSignerAuthor": true,
+	"company": "CLDMV",
+	"companyName": "Catalyzed Motivation Inc.",
+	"copyrightStartYear": 2013,
+	"forceAuthorUpdate": true,
+	"forceLastModifiedAuthorUpdate": true,
+	"fixCreatedDate": true,
+	"normalizeDateFormat": true,
+	"strictCreatedDate": true
+}
