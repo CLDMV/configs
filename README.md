@@ -103,7 +103,8 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 	"forceLastModifiedAuthorUpdate": true,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
-	"strictCreatedDate": true
+	"strictCreatedDate": true,
+	"margin": 1
 }
 ```
 
@@ -119,6 +120,7 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 | `fixCreatedDate`                | `true`                        | Move an existing `@Date` back to the oldest of itself, the file's first git commit and its filesystem creation time                   |
 | `normalizeDateFormat`           | `true`                        | Write every header date in the git `%aI` form (`2026-03-01T17:59:32-08:00`)                                                           |
 | `strictCreatedDate`             | `true`                        | With `--check`, fail on an `@Date` later than the file's first commit or creation time instead of only warning                        |
+| `margin`                        | `1`                           | One blank line between the header and the file's next content. The fix-headers default is two, which prettier collapses to one        |
 
 The full description of every option is in the [fix-headers README](https://github.com/CLDMV/fix-headers#readme).
 
