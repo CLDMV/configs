@@ -8,5 +8,6 @@
 	"forceLastModifiedAuthorUpdate": true,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
-	"strictCreatedDate": true
+	"strictCreatedDate": true,
+	"margin": 1
 }
