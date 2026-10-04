@@ -5,7 +5,7 @@
 	"companyName": "Catalyzed Motivation Inc.",
 	"copyrightStartYear": 2013,
 	"forceAuthorUpdate": false,
-	"forceLastModifiedAuthorUpdate": true,
+	"forceLastModifiedAuthorUpdate": false,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
 	"strictCreatedDate": true,
