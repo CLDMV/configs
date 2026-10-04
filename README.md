@@ -106,6 +106,7 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 	"company": "CLDMV",
 	"companyName": "Catalyzed Motivation Inc.",
 	"copyrightStartYear": 2013,
+	"forceAuthorUpdate": false,
 	"forceLastModifiedAuthorUpdate": true,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
@@ -121,13 +122,14 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 | `company`                       | `"CLDMV"`                     | Write `@Author` as `Name <CLDMV>`                                                                                                     |
 | `companyName`                   | `"Catalyzed Motivation Inc."` | The copyright holder in `@Copyright`. fix-headers v2 has no built-in holder and otherwise reads it from the manifest author (`CLDMV`) |
 | `copyrightStartYear`            | `2013`                        | The first year of the `@Copyright` range, for every file                                                                              |
+| `forceAuthorUpdate`             | `false`                       | Never rewrite an existing `@Author` / `@Email`; they record who created the file. A missing value is still filled in                  |
 | `forceLastModifiedAuthorUpdate` | `true`                        | Always rewrite `@Last modified by` to the detected values                                                                             |
 | `fixCreatedDate`                | `true`                        | Move an existing `@Date` back to the oldest of itself, the file's first git commit and its filesystem creation time                   |
 | `normalizeDateFormat`           | `true`                        | Write every header date in the git `%aI` form (`2026-03-01T17:59:32-08:00`)                                                           |
 | `strictCreatedDate`             | `true`                        | With `--check`, fail on an `@Date` later than the file's first commit or creation time instead of only warning                        |
 | `margin`                        | `1`                           | One blank line between the header and the file's next content. The fix-headers default is two, which prettier collapses to one        |
 
-An existing `@Author` is never rewritten: it records who created the file, and fix-headers keeps it unless `forceAuthorUpdate` is set, which this config deliberately leaves off. A repository can turn it on in its own config for a one-off migration of old author names.
+An existing `@Author` is never rewritten: it records who created the file, and this config sets `forceAuthorUpdate` to `false` explicitly so the decision is visible and wins over anything earlier in an `extends` chain. A repository can turn it on in its own config for a one-off migration of old author names.
 
 The full description of every option is in the [fix-headers README](https://github.com/CLDMV/fix-headers#readme).
 

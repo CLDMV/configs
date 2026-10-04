@@ -4,6 +4,7 @@
 	"company": "CLDMV",
 	"companyName": "Catalyzed Motivation Inc.",
 	"copyrightStartYear": 2013,
+	"forceAuthorUpdate": false,
 	"forceLastModifiedAuthorUpdate": true,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
