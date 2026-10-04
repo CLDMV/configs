@@ -14,12 +14,19 @@ The package has no runtime code and no dependencies. It ships the config files, 
 
 ## ✨ What's New
 
-### Latest: v1.1.0 (September 2026)
+### Latest: v1.2.3 (October 2026)
 
-- **The shared fix-headers config** — the first published release ships [`fix-headers.json`](#-fix-headersjson), CLDMV's standard options for [`@cldmv/fix-headers`](https://github.com/CLDMV/fix-headers): the author identity taken from the signing key, the `Catalyzed Motivation Inc.` copyright holder from 2013, and strict created-date checks. Repositories extend it by package specifier (`@cldmv/configs/fix-headers.json`) or by a tag-pinned URL and override only what is specific to them.
-- [View the v1.1.0 release](https://github.com/CLDMV/configs/releases/tag/v1.1.0)
+- **Headers restamped under fix-headers 2.1.4** — the repository's own header pass now runs on `@cldmv/fix-headers` 2.1.4 and restamped 37 internal files: dates are written in ISO 8601 form, 23 `@Date` timestamps that did not match their written date (the Dependabot config and 22 workflows copied from the `CLDMV/.github` templates) were corrected, and each header gained the empty frame line inside its opening and closing. The published `fix-headers.json` and every shipped setting are unchanged (#12).
+- [View full v1.2.3 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.3.md)
 
-📚 For complete release notes, see the [GitHub Releases](https://github.com/CLDMV/configs/releases).
+### Recent Releases
+
+- **v1.2.2** (October 2026) — the CI `✅ Required PR Check` mirror job runs on every path instead of being skipped on in-repo PRs (#10) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.2.md))
+- **v1.2.1** (October 2026) — a skipped PR run no longer satisfies the `✅ Required PR Check` ruleset (#8) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.1.md))
+- **v1.2.0** (October 2026) — the shared `fix-headers.json` sets `margin: 1`, so fix-headers and Prettier agree on one blank line after a header; this changes fix-headers 2.1+ output for extending repositories (#7) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.0.md))
+- **v1.1.1** (September 2026) — the README is rewritten in the CLDMV package style (#3) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.1.1.md))
+
+📚 **For complete version history, see [docs/changelog/](https://github.com/CLDMV/configs/tree/master/docs/changelog/) and the [GitHub Releases](https://github.com/CLDMV/configs/releases).**
 
 ---
 
@@ -99,7 +106,7 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 	"company": "CLDMV",
 	"companyName": "Catalyzed Motivation Inc.",
 	"copyrightStartYear": 2013,
-	"forceAuthorUpdate": true,
+	"forceAuthorUpdate": false,
 	"forceLastModifiedAuthorUpdate": true,
 	"fixCreatedDate": true,
 	"normalizeDateFormat": true,
@@ -115,12 +122,14 @@ Each file is exposed through `package.json` `exports`, so it resolves by its spe
 | `company`                       | `"CLDMV"`                     | Write `@Author` as `Name <CLDMV>`                                                                                                     |
 | `companyName`                   | `"Catalyzed Motivation Inc."` | The copyright holder in `@Copyright`. fix-headers v2 has no built-in holder and otherwise reads it from the manifest author (`CLDMV`) |
 | `copyrightStartYear`            | `2013`                        | The first year of the `@Copyright` range, for every file                                                                              |
-| `forceAuthorUpdate`             | `true`                        | Always rewrite `@Author` / `@Email` to the detected values                                                                            |
+| `forceAuthorUpdate`             | `false`                       | Never rewrite an existing `@Author` / `@Email`; they record who created the file. A missing value is still filled in                  |
 | `forceLastModifiedAuthorUpdate` | `true`                        | Always rewrite `@Last modified by` to the detected values                                                                             |
 | `fixCreatedDate`                | `true`                        | Move an existing `@Date` back to the oldest of itself, the file's first git commit and its filesystem creation time                   |
 | `normalizeDateFormat`           | `true`                        | Write every header date in the git `%aI` form (`2026-03-01T17:59:32-08:00`)                                                           |
 | `strictCreatedDate`             | `true`                        | With `--check`, fail on an `@Date` later than the file's first commit or creation time instead of only warning                        |
 | `margin`                        | `1`                           | One blank line between the header and the file's next content. The fix-headers default is two, which prettier collapses to one        |
+
+An existing `@Author` is never rewritten: it records who created the file, and this config sets `forceAuthorUpdate` to `false` explicitly so the decision is visible and wins over anything earlier in an `extends` chain. A repository can turn it on in its own config for a one-off migration of old author names.
 
 The full description of every option is in the [fix-headers README](https://github.com/CLDMV/fix-headers#readme).
 
