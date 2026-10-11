@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-03T19:43:16-07:00 (1791081796)
+ *	@Last modified time: 2026-10-11T13:12:08-07:00 (1791749528)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -25,7 +25,17 @@ import { describe, expect, it } from "vitest";
 import { pkg, root } from "./helpers/package.mjs";
 
 /** Every file the published tarball should contain, and nothing else. */
-const INTENDED_FILES = ["LICENSE", "README.md", "fix-headers.json", "package.json"];
+const INTENDED_FILES = [
+	"LICENSE",
+	"README.md",
+	"bin/cldmv-configs.mjs",
+	"eslint.config.mjs",
+	"fix-headers.json",
+	"package.json",
+	"prettier.json",
+	"prettierignore",
+	"vitest.config.mjs"
+];
 
 /**
  * Lists the files `npm pack` would publish, without running lifecycle scripts.
@@ -51,19 +61,37 @@ describe("package contents", () => {
 		expect(shipped).toEqual([...INTENDED_FILES].sort());
 	});
 
-	it("has no runtime dependencies", () => {
-		expect(pkg.dependencies).toBeUndefined();
-		expect(pkg.peerDependencies).toBeUndefined();
+	it("depends only on the plugins the ESLint base imports", () => {
+		expect(Object.keys(pkg.dependencies).sort()).toEqual(
+			["@cldmv/eslint-plugin-jsonv", "@eslint/css", "@eslint/js", "@eslint/json", "@eslint/markdown", "globals"].sort()
+		);
 		expect(pkg.optionalDependencies).toBeUndefined();
+	});
+
+	it("declares the tools the configs are for as optional peers", () => {
+		expect(Object.keys(pkg.peerDependencies).sort()).toEqual(["@cldmv/prettier-plugin-jsonv", "eslint", "vitest"]);
+		for (const name of Object.keys(pkg.peerDependencies)) expect(pkg.peerDependenciesMeta[name]).toEqual({ optional: true });
+	});
+
+	it("accepts Vitest 4 and 5", () => {
+		expect(pkg.peerDependencies.vitest).toBe("^4.0.0 || ^5.0.0");
+	});
+
+	it("keeps the plugins the configs import out of devDependencies", () => {
+		for (const name of Object.keys(pkg.dependencies)) expect(pkg.devDependencies?.[name], `${name} is both`).toBeUndefined();
 	});
 });
 
 describe("exports", () => {
 	const entries = Object.entries(pkg.exports);
 
-	it("exposes the fix-headers config and package.json", () => {
+	it("exposes every shared config and package.json", () => {
 		expect(pkg.exports).toMatchObject({
+			"./eslint.config.mjs": "./eslint.config.mjs",
+			"./prettierignore": "./prettierignore",
+			"./vitest.config.mjs": "./vitest.config.mjs",
 			"./fix-headers.json": "./fix-headers.json",
+			"./prettier.json": "./prettier.json",
 			"./package.json": "./package.json"
 		});
 	});
@@ -82,5 +110,17 @@ describe("exports", () => {
 	it("imports fix-headers.json as a JSON module by its public specifier", async () => {
 		const mod = await import("@cldmv/configs/fix-headers.json", { with: { type: "json" } });
 		expect(mod.default).toMatchObject({ company: "CLDMV", includeFolders: ["."] });
+	});
+
+	it("imports prettier.json as a JSON module by its public specifier", async () => {
+		const mod = await import("@cldmv/configs/prettier.json", { with: { type: "json" } });
+		expect(mod.default).toMatchObject({ useTabs: true, printWidth: 140, plugins: ["@cldmv/prettier-plugin-jsonv"] });
+	});
+
+	it("imports the ESLint and Vitest bases by their public specifiers", async () => {
+		const eslintBase = await import("@cldmv/configs/eslint.config.mjs");
+		const vitestBase = await import("@cldmv/configs/vitest.config.mjs");
+		expect(Array.isArray(eslintBase.default)).toBe(true);
+		expect(vitestBase.default).toBeTypeOf("object");
 	});
 });

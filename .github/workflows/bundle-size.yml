@@ -6,7 +6,7 @@
 #	@Email: <Shinrai@users.noreply.github.com>
 #	-----
 #	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
-#	@Last modified time: 2026-10-03T19:43:12-07:00 (1791081792)
+#	@Last modified time: 2026-10-11T12:46:50-07:00 (1791748010)
 #	-----
 #	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
 #
@@ -62,7 +62,7 @@ jobs:
             # the measured files are those configs. build:ci is the repo's build
             # (lint + format:check); it emits nothing, there being nothing to bundle.
             build_command: "npm run build:ci"
-            dist_paths: "fix-headers.json"
+            dist_paths: "bin/**,eslint.config.mjs,fix-headers.json,prettier.json,prettierignore,vitest.config.mjs"
             # warning_pct: 5
             # warning_bytes: 500
             # comment_mode: "update"
