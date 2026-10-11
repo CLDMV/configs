@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-03T19:43:16-07:00 (1791081796)
+ *	@Last modified time: 2026-10-11T11:27:44-07:00 (1791743264)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -25,7 +25,7 @@ import { describe, expect, it } from "vitest";
 import { pkg, root } from "./helpers/package.mjs";
 
 /** Every file the published tarball should contain, and nothing else. */
-const INTENDED_FILES = ["LICENSE", "README.md", "fix-headers.json", "package.json"];
+const INTENDED_FILES = ["LICENSE", "README.md", "fix-headers.json", "package.json", "prettier.json"];
 
 /**
  * Lists the files `npm pack` would publish, without running lifecycle scripts.
@@ -53,17 +53,22 @@ describe("package contents", () => {
 
 	it("has no runtime dependencies", () => {
 		expect(pkg.dependencies).toBeUndefined();
-		expect(pkg.peerDependencies).toBeUndefined();
 		expect(pkg.optionalDependencies).toBeUndefined();
+	});
+
+	it("declares only the jsonv Prettier plugin as a peer, and marks it optional", () => {
+		expect(Object.keys(pkg.peerDependencies)).toEqual(["@cldmv/prettier-plugin-jsonv"]);
+		expect(pkg.peerDependenciesMeta).toEqual({ "@cldmv/prettier-plugin-jsonv": { optional: true } });
 	});
 });
 
 describe("exports", () => {
 	const entries = Object.entries(pkg.exports);
 
-	it("exposes the fix-headers config and package.json", () => {
+	it("exposes the fix-headers config, the prettier config and package.json", () => {
 		expect(pkg.exports).toMatchObject({
 			"./fix-headers.json": "./fix-headers.json",
+			"./prettier.json": "./prettier.json",
 			"./package.json": "./package.json"
 		});
 	});
@@ -82,5 +87,10 @@ describe("exports", () => {
 	it("imports fix-headers.json as a JSON module by its public specifier", async () => {
 		const mod = await import("@cldmv/configs/fix-headers.json", { with: { type: "json" } });
 		expect(mod.default).toMatchObject({ company: "CLDMV", includeFolders: ["."] });
+	});
+
+	it("imports prettier.json as a JSON module by its public specifier", async () => {
+		const mod = await import("@cldmv/configs/prettier.json", { with: { type: "json" } });
+		expect(mod.default).toMatchObject({ useTabs: true, printWidth: 140, plugins: ["@cldmv/prettier-plugin-jsonv"] });
 	});
 });

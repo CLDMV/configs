@@ -26,6 +26,7 @@
 	"sideEffects": false,
 	"files": [
 		"fix-headers.json",
+		"prettier.json",
 		"README.md",
 		"LICENSE"
 	],
@@ -42,11 +43,21 @@
 		"config",
 		"configs",
 		"shared-config",
-		"fix-headers"
+		"fix-headers",
+		"prettier"
 	],
 	"exports": {
 		"./fix-headers.json": "./fix-headers.json",
+		"./prettier.json": "./prettier.json",
 		"./package.json": "./package.json"
+	},
+	"peerDependencies": {
+		"@cldmv/prettier-plugin-jsonv": "^1.1.0"
+	},
+	"peerDependenciesMeta": {
+		"@cldmv/prettier-plugin-jsonv": {
+			"optional": true
+		}
 	},
 	"scripts": {
 		"build:ci": "npm run lint && npm run format:check",
@@ -56,8 +67,8 @@
 		"ci:coverage": "npm run coverage",
 		"lint": "eslint --config .configs/eslint.config.mjs .",
 		"lint:fix": "eslint --config .configs/eslint.config.mjs . --fix",
-		"format": "prettier --config .configs/.prettierrc --write .",
-		"format:check": "prettier --config .configs/.prettierrc --check .",
+		"format": "prettier --config .configs/prettier.config.mjs --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --check .",
 		"fix:headers": "fix-headers --config fix-headers.json",
 		"prepare": "node -e \"import('./.githooks/install.mjs').catch(()=>{})\""
 	},
