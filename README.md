@@ -4,7 +4,7 @@
 
 A repository points its tool at the shared file and keeps only its own overrides locally. When a house setting changes, it changes here once, and every repository picks it up on its next update.
 
-The package has no runtime code and no dependencies. It ships the config files, this README, the license and `package.json`, and nothing else.
+The package has no runtime code and no dependencies. It ships the config files, this README, the license and `package.json`, and nothing else. The one peer dependency, `@cldmv/prettier-plugin-jsonv`, is optional and only matters to repositories that format `.jsonv` files.
 
 [![npm version]][npm_version_url] [![npm downloads]][npm_downloads_url] [![Last commit]][last_commit_url] [![npm last update]][npm_last_update_url] [![coverage]][coverage_url]
 
@@ -14,17 +14,17 @@ The package has no runtime code and no dependencies. It ships the config files, 
 
 ## ✨ What's New
 
-### Latest: v1.2.5 (October 2026)
+### Latest: v1.3.0 (October 2026)
 
-- **Tooling refresh only** — `eslint` 10.12.0, the jsonv plugins and `@cldmv/vitest-runner` 1.5.2 in this repository's dev dependencies (#24, #25). `fix-headers.json` is unchanged from v1.2.4, so extending repositories need no action.
-- [View full v1.2.5 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.5.md)
+- **Shared Prettier config** — new `prettier.json`, CLDMV's house formatting (tabs, 140 columns, preserved quote props and prose wrapping, the jsonv parser for `.jsonv` files), available as `@cldmv/configs/prettier.json`. Extend it from `.configs/prettier.config.mjs`. The jsonv plugin is an optional peer dependency: install `@cldmv/prettier-plugin-jsonv` only if the repository formats `.jsonv` files. This repository now formats itself with the file it publishes. `fix-headers.json` is unchanged.
+- [View full v1.3.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md)
 
 ### Recent Releases
 
+- **v1.2.5** (October 2026) — dev-tooling refresh only: `eslint` 10.12.0, the jsonv plugins and `@cldmv/vitest-runner` 1.5.2 in this repository's dev dependencies (#24, #25); `fix-headers.json` unchanged ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.5.md))
 - **v1.2.4** (October 2026) — the shared `fix-headers.json` sets `forceLastModifiedAuthorUpdate` to `false`, so `@Last modified by` changes only when a file's content was edited; needs fix-headers 2.2.0 or later (#20) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.4.md))
 - **v1.2.3** (October 2026) — the shared `fix-headers.json` keeps an existing `@Author` (`forceAuthorUpdate: false`, #16), and the repository's own headers are restamped under fix-headers 2.1.4 (#12) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.3.md))
 - **v1.2.2** (October 2026) — the CI `✅ Required PR Check` mirror job runs on every path instead of being skipped on in-repo PRs (#10) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.2.md))
-- **v1.2.1** (October 2026) — a skipped PR run no longer satisfies the `✅ Required PR Check` ruleset (#8) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.1.md))
 
 📚 **For complete version history, see [docs/changelog/](https://github.com/CLDMV/configs/tree/master/docs/changelog/) and the [GitHub Releases](https://github.com/CLDMV/configs/releases).**
 
@@ -33,8 +33,8 @@ The package has no runtime code and no dependencies. It ships the config files, 
 ## 🚀 Key Features
 
 - **One source of truth** — each house setting is defined once, here, instead of in a copy per repository.
-- **Plain JSON** — no runtime code and no dependencies; the tool reads the file directly.
-- **Two ways to consume it** — by package specifier through `package.json` `exports` (`@cldmv/configs/fix-headers.json`), or by a raw GitHub URL pinned to a release tag.
+- **Plain JSON** — no runtime code and no dependencies; the tool reads the file directly. The jsonv Prettier plugin is an optional peer, needed only to format `.jsonv` files.
+- **Two ways to consume it** — by package specifier through `package.json` `exports` (`@cldmv/configs/fix-headers.json`, `@cldmv/configs/prettier.json`), or by a raw GitHub URL pinned to a release tag.
 - **Local overrides** — a repository's own config extends the shared file and overrides only the keys that are genuinely specific to it.
 - **Tested** — the suite checks that every exported file parses, that every `exports` entry ships, that the settings are ones the tool accepts, and that `npm pack` publishes exactly the intended files.
 
@@ -45,13 +45,20 @@ The package has no runtime code and no dependencies. It ships the config files, 
 ### Requirements
 
 - A tool that can extend a shared config. For fix-headers that is **v2.0.0 or later**: `extends` arrives in [CLDMV/fix-headers#88](https://github.com/CLDMV/fix-headers/pull/88), and several of the options this config sets (`fixCreatedDate`, `normalizeDateFormat`, `strictCreatedDate`) in [CLDMV/fix-headers#67](https://github.com/CLDMV/fix-headers/pull/67). Older releases cannot resolve `extends` and ignore those options. Use **v2.2.0 or later** for the author rules: from 2.2.0, `@Last modified by` changes only when a file's content was edited ([CLDMV/fix-headers#128](https://github.com/CLDMV/fix-headers/pull/128)).
+- For `prettier.json`, **Prettier 3** with a config file that can import JSON (`prettier.config.mjs`). Repositories that format `.jsonv` files also install [`@cldmv/prettier-plugin-jsonv`](https://github.com/CLDMV/prettier-plugin-jsonv), an optional peer dependency of this package.
 
 ### Install
 
 Install the package as a devDependency next to the tool it configures:
 
 ```sh
-npm install --save-dev @cldmv/configs@latest @cldmv/fix-headers@latest
+npm install --save-dev @cldmv/configs@latest @cldmv/fix-headers@latest prettier@latest
+```
+
+A repository that formats `.jsonv` files also installs the jsonv plugin, the optional peer dependency that `prettier.json` loads:
+
+```sh
+npm install --save-dev @cldmv/prettier-plugin-jsonv@latest
 ```
 
 ---
@@ -85,13 +92,54 @@ npm run fix:headers
 
 A first run rewrites many headers across the repository, so land it when no open pull request touches the same files.
 
+### Prettier
+
+Create the repository's own config, `.configs/prettier.config.mjs`, re-exporting the shared file:
+
+```js
+import base from "@cldmv/configs/prettier.json" with { type: "json" };
+
+export default base;
+```
+
+Point the npm scripts at it:
+
+```json
+{
+	"scripts": {
+		"format": "prettier --config .configs/prettier.config.mjs --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --check ."
+	}
+}
+```
+
+`prettier.json` loads `@cldmv/prettier-plugin-jsonv`, so a repository that formats `.jsonv` files installs that plugin alongside this package. A repository with no `.jsonv` files does not need the plugin: spread the base and drop `plugins` and the jsonv override.
+
+```js
+import base from "@cldmv/configs/prettier.json" with { type: "json" };
+
+export default {
+	...base,
+	plugins: [],
+	overrides: base.overrides.filter((entry) => entry.files !== "*.jsonv")
+};
+```
+
+Preview the first run before writing anything, then apply it. A first run can reformat many files, so land it when no open pull request touches the same files.
+
+```sh
+npx prettier --config .configs/prettier.config.mjs --check .
+npm run format
+```
+
 ---
 
 ## 📋 Configs
 
-| File                                   | Tool                                                         | Specifier                         | What it sets                                                                                                    |
-| -------------------------------------- | ------------------------------------------------------------ | --------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| [`fix-headers.json`](fix-headers.json) | [`@cldmv/fix-headers`](https://github.com/CLDMV/fix-headers) | `@cldmv/configs/fix-headers.json` | CLDMV's standard file-header options: author and company identity, copyright range, and the created-date checks |
+| File                                   | Tool                                                         | Specifier                         | What it sets                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| [`fix-headers.json`](fix-headers.json) | [`@cldmv/fix-headers`](https://github.com/CLDMV/fix-headers) | `@cldmv/configs/fix-headers.json` | CLDMV's standard file-header options: author and company identity, copyright range, and the created-date checks    |
+| [`prettier.json`](prettier.json)       | [`prettier`](https://prettier.io)                            | `@cldmv/configs/prettier.json`    | CLDMV's house formatting: tabs, a 140-column width, preserved quote props and prose wrapping, and the jsonv plugin |
 
 Each file is exposed through `package.json` `exports`, so it resolves by its specifier from any project that installs the package, and is also reachable by URL straight from this repository.
 
@@ -160,6 +208,77 @@ A key set in the repository's own `.configs/fix-headers.json` overrides the same
 ```
 
 Keep overrides to what is genuinely specific to the repository. A setting every repository would want belongs in the shared file.
+
+---
+
+## 🎨 prettier.json
+
+```json
+{
+	"useTabs": true,
+	"tabWidth": 2,
+	"printWidth": 140,
+	"trailingComma": "none",
+	"quoteProps": "preserve",
+	"bracketSpacing": true,
+	"overrides": [
+		{
+			"files": "*.xml",
+			"options": {
+				"printWidth": 300
+			}
+		},
+		{
+			"files": "*.md",
+			"options": {
+				"proseWrap": "preserve"
+			}
+		},
+		{
+			"files": "*.jsonv",
+			"options": {
+				"parser": "jsonv"
+			}
+		}
+	],
+	"plugins": ["@cldmv/prettier-plugin-jsonv"]
+}
+```
+
+| Option                    | Value                              | Effect                                                                                                                        |
+| ------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `useTabs`                 | `true`                             | Indent with tabs                                                                                                              |
+| `tabWidth`                | `2`                                | A tab counts as two columns when Prettier measures line width                                                                 |
+| `printWidth`              | `140`                              | Wrap lines at 140 columns instead of the default 80, which keeps short call chains and object literals on one line            |
+| `trailingComma`           | `"none"`                           | No trailing commas in multi-line literals, calls or parameter lists                                                           |
+| `quoteProps`              | `"preserve"`                       | Leave object-key quoting as written, so keys that must be quoted (HTTP headers, JSON-like data) can sit next to unquoted ones |
+| `bracketSpacing`          | `true`                             | Spaces inside object braces: `{ a: 1 }`                                                                                       |
+| `overrides` for `*.xml`   | `printWidth: 300`                  | XML is wrapped at 300 columns; its markup does not wrap readably at 140                                                       |
+| `overrides` for `*.md`    | `proseWrap: "preserve"`            | Markdown paragraphs are never re-flowed: one paragraph per line, so a one-word edit stays a one-line diff                     |
+| `overrides` for `*.jsonv` | `parser: "jsonv"`                  | Parse `.jsonv` files with the jsonv plugin's parser                                                                           |
+| `plugins`                 | `["@cldmv/prettier-plugin-jsonv"]` | Load the jsonv plugin, which provides that parser. An optional peer dependency of this package                                |
+
+YAML is not configured here. CI workflow files are four-space indented by convention and YAML forbids tabs, so repositories list `*.yml` and `*.yaml` in their `.prettierignore` rather than have Prettier reindent every workflow.
+
+### The jsonv plugin is optional
+
+Prettier fails to start when a config names a plugin it cannot load, so a repository that extends `prettier.json` without installing `@cldmv/prettier-plugin-jsonv` gets an error naming the plugin. The package declares the plugin as an optional peer dependency (`peerDependenciesMeta`), so npm does not install it for you and does not warn when it is absent. Install it in repositories that format `.jsonv` files, or drop `plugins` and the `*.jsonv` override as shown in [Prettier](#prettier) under Quick Start.
+
+### Overriding options
+
+The repository's own `.configs/prettier.config.mjs` is plain JavaScript, so it can spread the shared object and override any key. `overrides` and `plugins` are arrays, and a spread replaces them rather than merging, so list every entry you want to keep:
+
+```js
+import base from "@cldmv/configs/prettier.json" with { type: "json" };
+
+export default {
+	...base,
+	printWidth: 120,
+	overrides: [...base.overrides, { files: "*.html", options: { printWidth: 200 } }]
+};
+```
+
+This repository uses the file the same way: its `.configs/prettier.config.mjs` re-exports `../prettier.json`, so the repository is formatted by the exact file it publishes.
 
 ---
 
