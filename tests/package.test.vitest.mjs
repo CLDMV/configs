@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:46:59-07:00 (1791748019)
+ *	@Last modified time: 2026-10-11T13:12:08-07:00 (1791749528)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -71,6 +71,10 @@ describe("package contents", () => {
 	it("declares the tools the configs are for as optional peers", () => {
 		expect(Object.keys(pkg.peerDependencies).sort()).toEqual(["@cldmv/prettier-plugin-jsonv", "eslint", "vitest"]);
 		for (const name of Object.keys(pkg.peerDependencies)) expect(pkg.peerDependenciesMeta[name]).toEqual({ optional: true });
+	});
+
+	it("accepts Vitest 4 and 5", () => {
+		expect(pkg.peerDependencies.vitest).toBe("^4.0.0 || ^5.0.0");
 	});
 
 	it("keeps the plugins the configs import out of devDependencies", () => {

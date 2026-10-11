@@ -8,7 +8,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:45:43-07:00 (1791747943)
+ *	@Last modified time: 2026-10-11T13:10:36-07:00 (1791749436)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -20,7 +20,7 @@
  *
  * Exit codes: 0 ok, 1 drift or problems found, 2 usage or I/O error.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -59,16 +59,65 @@ const STUBS = [
 	}
 ];
 
-/** The standard npm scripts: name, command, and the stub file the command must reference. */
+/**
+ * The standard npm scripts. `names` maps each naming convention to the script name `init` adds; `aliases` lists every name `check` accepts.
+ * `fleet` uses `format` and `format:check`, `prettier` uses `prettier:write` and `prettier:check`.
+ */
 const SCRIPTS = [
-	{ name: "format", command: "prettier --config .configs/prettier.config.mjs --write .", stub: ".configs/prettier.config.mjs" },
-	{ name: "format:check", command: "prettier --config .configs/prettier.config.mjs --check .", stub: ".configs/prettier.config.mjs" },
-	{ name: "lint", command: "eslint --config .configs/eslint.config.mjs .", stub: ".configs/eslint.config.mjs" },
-	{ name: "lint:fix", command: "eslint --config .configs/eslint.config.mjs . --fix", stub: ".configs/eslint.config.mjs" },
-	{ name: "fix:headers", command: "fix-headers --config .configs/fix-headers.json", stub: ".configs/fix-headers.json" },
-	{ name: "test", command: "vitest run --config .configs/vitest.config.mjs", stub: ".configs/vitest.config.mjs" },
-	{ name: "coverage", command: "vitest run --coverage --config .configs/vitest.config.mjs", stub: ".configs/vitest.config.mjs" }
+	{
+		key: "format",
+		names: { fleet: "format", prettier: "prettier:write" },
+		aliases: ["format", "prettier:write"],
+		command: (ignoreFlags) => `prettier --config .configs/prettier.config.mjs${ignoreFlags} --write .`,
+		stub: ".configs/prettier.config.mjs"
+	},
+	{
+		key: "format:check",
+		names: { fleet: "format:check", prettier: "prettier:check" },
+		aliases: ["format:check", "prettier:check"],
+		command: (ignoreFlags) => `prettier --config .configs/prettier.config.mjs${ignoreFlags} --check .`,
+		stub: ".configs/prettier.config.mjs"
+	},
+	{
+		key: "lint",
+		names: { fleet: "lint", prettier: "lint" },
+		aliases: ["lint"],
+		command: () => "eslint --config .configs/eslint.config.mjs .",
+		stub: ".configs/eslint.config.mjs"
+	},
+	{
+		key: "lint:fix",
+		names: { fleet: "lint:fix", prettier: "lint:fix" },
+		aliases: ["lint:fix"],
+		command: () => "eslint --config .configs/eslint.config.mjs . --fix",
+		stub: ".configs/eslint.config.mjs"
+	},
+	{
+		key: "fix:headers",
+		names: { fleet: "fix:headers", prettier: "fix:headers" },
+		aliases: ["fix:headers"],
+		command: () => "fix-headers --config .configs/fix-headers.json",
+		stub: ".configs/fix-headers.json"
+	},
+	{
+		key: "test",
+		names: { fleet: "test", prettier: "test" },
+		aliases: ["test"],
+		command: () => "vitest run --config .configs/vitest.config.mjs",
+		stub: ".configs/vitest.config.mjs"
+	},
+	{
+		key: "coverage",
+		names: { fleet: "coverage", prettier: "coverage" },
+		aliases: ["coverage"],
+		command: () => "vitest run --coverage --config .configs/vitest.config.mjs",
+		stub: ".configs/vitest.config.mjs"
+	}
 ];
+
+const DEFAULT_IGNORE_FILE = ".prettierignore";
+const SHARED_OPTIONS =
+	"  --workspaces        Run in every workspace package (pnpm-workspace.yaml `packages:` or package.json `workspaces`)\n  --root              With --workspaces, also run in the workspace root\n  --ignore-file <p>   Path of the managed Prettier ignore file (default .prettierignore, e.g. .configs/.prettierignore)\n  --json              Print a machine-readable summary (nested per package with --workspaces)";
 
 const HELP = {
 	main: `cldmv-configs ${shippedPackage.version}: adopt the shared @cldmv/configs files and detect drift.
@@ -76,66 +125,83 @@ const HELP = {
 Usage: cldmv-configs <command> [options]
 
 Commands:
-  init     Create the missing .configs/ stubs, .prettierignore and standard npm scripts (never overwrites)
+  init     Create the missing .configs/ stubs, the Prettier ignore file and standard npm scripts (never overwrites)
   check    Report drift from the shared configs without writing anything
-  sync     Refresh the managed block of .prettierignore from the shipped file
+  sync     Refresh the managed block of the Prettier ignore file from the shipped file
 
 Options:
   -h, --help   Show help (also after a command: cldmv-configs init --help)
-  --json       Print a machine-readable summary instead of plain lines
+  --workspaces Run the command in every workspace package instead of only the current directory
 
 Exit codes: 0 ok, 1 drift or problems found, 2 usage or I/O error.
-Run from the root of the repository to configure.`,
-	init: `Usage: cldmv-configs init [--dry-run] [--json]
+Run from the root of the repository (or of the workspace) to configure.`,
+	init: `Usage: cldmv-configs init [--dry-run] [--scripts fleet|prettier] [--workspaces [--root]] [--ignore-file <path>] [--json]
 
-Creates, only when missing, in the current directory:
-  .configs/fix-headers.json  .configs/prettier.config.mjs  .configs/eslint.config.mjs  .configs/vitest.config.mjs  .prettierignore
+Creates, only when missing, in the current directory (or in every workspace package with --workspaces):
+  .configs/fix-headers.json  .configs/prettier.config.mjs  .configs/eslint.config.mjs  .configs/vitest.config.mjs  and the Prettier ignore file
 and adds to package.json scripts, never changing an existing key:
   format  format:check  lint  lint:fix  fix:headers  test  coverage
+With --scripts prettier the Prettier scripts are named prettier:write and prettier:check instead of format and format:check.
+A script is never added when either name of its pair already exists. With a non-default --ignore-file the Prettier scripts pass
+--ignore-path .gitignore --ignore-path <path>.
 
 Options:
-  --dry-run   Print what would change and write nothing
-  --json      Print a machine-readable summary`,
-	check: `Usage: cldmv-configs check [--strict] [--json]
+  --dry-run           Print what would change and write nothing
+  --scripts <name>    Script naming convention: fleet (default) or prettier
+${SHARED_OPTIONS}`,
+	check: `Usage: cldmv-configs check [--strict] [--workspaces [--root]] [--ignore-file <path>] [--json]
 
 Reports, without writing:
   - each .configs/ stub exists and still references the @cldmv/configs base (problem if not)
-  - the .prettierignore managed block is present and matches the shipped block (problem if not)
-  - each standard npm script exists and references its .configs/ stub (warning if not)
+  - the Prettier ignore file's managed block is present and matches the shipped block (problem if not)
+  - @cldmv/configs is a dependency where a stub imports it (problem if not; under pnpm it must be in the package itself)
+  - each standard npm script exists and references its .configs/ stub (warning if not); format = prettier:write and
+    format:check = prettier:check are accepted as equivalent
 
 Options:
-  --strict   Exit 1 on warnings too
-  --json     Print a machine-readable summary
+  --strict            Exit 1 on warnings too
+${SHARED_OPTIONS}
 
 Exit 1 when a problem is found (or a warning with --strict).`,
-	sync: `Usage: cldmv-configs sync [--dry-run] [--json]
+	sync: `Usage: cldmv-configs sync [--dry-run] [--workspaces [--root]] [--ignore-file <path>] [--json]
 
-Rewrites only the managed block of .prettierignore (between the "# >>> @cldmv/configs prettierignore" and
+Rewrites only the managed block of the Prettier ignore file (between the "# >>> @cldmv/configs prettierignore" and
 "# <<< @cldmv/configs prettierignore" lines) from the shipped file; everything outside the markers is left byte-for-byte.
-Creates .prettierignore when it is missing. Refuses (exit 1, with a diff) when the file has no markers.
+Creates the file when it is missing. Refuses (exit 1, with a diff) when the file has no markers.
 
 Options:
-  --dry-run   Print what would change and write nothing
-  --json      Print a machine-readable summary`
+  --dry-run           Print what would change and write nothing
+${SHARED_OPTIONS}`
 };
 
 /** Raised for bad usage or an unusable working directory; the CLI exits 2. */
 class UsageError extends Error {}
 
+const VALUE_OPTIONS = new Set(["--ignore-file", "--scripts"]);
+
 /**
- * Splits argv into a command and flags.
+ * Splits argv into a command, boolean flags and `--name value` options.
  * @param {string[]} argv - Arguments after the script name.
- * @returns {{ command: string | undefined, flags: Set<string> }} The parsed command line.
+ * @returns {{ command: string | undefined, flags: Set<string>, values: Record<string, string> }} The parsed command line.
  */
 function parseArgs(argv) {
 	const flags = new Set();
+	const values = {};
 	let command;
-	for (const arg of argv) {
-		if (arg.startsWith("-")) flags.add(arg === "-h" ? "--help" : arg);
+	for (let index = 0; index < argv.length; index += 1) {
+		const arg = argv[index];
+		const [name, inline] = arg.startsWith("--")
+			? [arg.slice(0, arg.includes("=") ? arg.indexOf("=") : undefined), arg.includes("=") ? arg.slice(arg.indexOf("=") + 1) : undefined]
+			: [arg, undefined];
+		if (VALUE_OPTIONS.has(name)) {
+			const value = inline ?? argv[(index += 1)];
+			if (value === undefined || value.startsWith("-")) throw new UsageError(`${name} needs a value`);
+			values[name] = value;
+		} else if (arg.startsWith("-")) flags.add(arg === "-h" ? "--help" : arg);
 		else if (command === undefined) command = arg;
 		else throw new UsageError(`unexpected argument "${arg}"`);
 	}
-	return { command, flags };
+	return { command, flags, values };
 }
 
 /**
@@ -237,22 +303,74 @@ function readManifest(cwd) {
 
 /**
  * @typedef {{ area: string, name: string, level: string, message: string }} Result
+ * @typedef {{ dryRun: boolean, scripts: "fleet" | "prettier", ignoreFile: string, workspaceRoot: string, label: string }} Env
  */
 
+/** The `--ignore-path` flags the Prettier scripts need when the ignore file is not the default one. */
+const ignoreFlagsFor = (ignoreFile) => (ignoreFile === DEFAULT_IGNORE_FILE ? "" : ` --ignore-path .gitignore --ignore-path ${ignoreFile}`);
+
 /**
- * Creates the missing stubs, `.prettierignore` and standard scripts.
- * @param {string} cwd - Consumer repository root.
- * @param {boolean} dryRun - Write nothing when true.
+ * Whether the package manager is pnpm for this package (a pnpm lockfile or workspace file at the workspace root or in the package).
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
+ * @returns {boolean} True under pnpm.
+ */
+const usesPnpm = (dir, env) =>
+	[env.workspaceRoot, dir].some(
+		(where) => existsSync(path.join(where, "pnpm-lock.yaml")) || existsSync(path.join(where, "pnpm-workspace.yaml"))
+	);
+
+/**
+ * The command that installs @cldmv/configs for a package.
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
+ * @param {Record<string, any>} data - The package's package.json.
+ * @returns {string} A shell command.
+ */
+function installCommand(dir, env, data) {
+	const inWorkspace = path.resolve(dir) !== path.resolve(env.workspaceRoot);
+	const name = data.name ?? env.label;
+	if (usesPnpm(dir, env)) {
+		if (inWorkspace) return `pnpm add -D @cldmv/configs@latest --filter ${name}`;
+		return `pnpm add -D @cldmv/configs@latest${existsSync(path.join(dir, "pnpm-workspace.yaml")) ? " -w" : ""}`;
+	}
+	return `npm install --save-dev @cldmv/configs@latest${inWorkspace ? ` -w ${name}` : ""}`;
+}
+
+/**
+ * Whether a package.json lists @cldmv/configs as a dependency.
+ * @param {Record<string, any>} data - Parsed package.json.
+ * @returns {boolean} True when listed.
+ */
+const hasConfigsDependency = (data) => Boolean(data.devDependencies?.["@cldmv/configs"] ?? data.dependencies?.["@cldmv/configs"]);
+
+/**
+ * Reads the workspace root's package.json when there is one.
+ * @param {Env} env - Run settings.
+ * @returns {Record<string, any>} The parsed manifest or an empty object.
+ */
+function readRootManifest(env) {
+	try {
+		return JSON.parse(readFileSync(path.join(env.workspaceRoot, "package.json"), "utf8"));
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * Creates the missing stubs, ignore file and standard scripts.
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
  * @returns {{ results: Result[], ok: boolean }} What was created, added or kept.
  */
-function init(cwd, dryRun) {
-	const manifest = readManifest(cwd);
+function init(dir, env) {
+	const manifest = readManifest(dir);
 	/** @type {Result[]} */
 	const results = [];
 	const create = (relative, content) => {
-		const target = path.join(cwd, relative);
+		const target = path.join(dir, relative);
 		if (existsSync(target)) return false;
-		if (!dryRun) {
+		if (!env.dryRun) {
 			mkdirSync(path.dirname(target), { recursive: true });
 			writeFileSync(target, content);
 		}
@@ -263,64 +381,82 @@ function init(cwd, dryRun) {
 		results.push({ area: "file", name: stub.file, level: made ? "created" : "kept", message: made ? "created" : "already exists" });
 	}
 	const freshIgnore = [...shippedLines].map((line, index) => (index === shippedBlock.open ? versionedBlock()[0] : line)).join("\n");
-	const ignorePath = path.join(cwd, ".prettierignore");
+	const ignorePath = path.join(dir, env.ignoreFile);
 	const hadIgnore = existsSync(ignorePath);
-	const madeIgnore = create(".prettierignore", freshIgnore);
+	const madeIgnore = create(env.ignoreFile, freshIgnore);
 	const ignoreBlock = hadIgnore ? findBlock(readFileSync(ignorePath, "utf8").split("\n")) : null;
 	const note =
 		ignoreBlock && ignoreBlock.state !== "ok"
 			? "already exists without a managed block; add the markers, then run `cldmv-configs sync`"
 			: "already exists";
-	results.push({ area: "file", name: ".prettierignore", level: madeIgnore ? "created" : "kept", message: madeIgnore ? "created" : note });
+	results.push({ area: "file", name: env.ignoreFile, level: madeIgnore ? "created" : "kept", message: madeIgnore ? "created" : note });
 	manifest.data.scripts ??= {};
 	let changed = false;
 	for (const script of SCRIPTS) {
-		if (Object.hasOwn(manifest.data.scripts, script.name)) {
-			results.push({ area: "script", name: script.name, level: "kept", message: "already defined" });
+		const existing = script.aliases.find((alias) => Object.hasOwn(manifest.data.scripts, alias));
+		if (existing) {
+			results.push({ area: "script", name: existing, level: "kept", message: "already defined" });
 		} else {
-			manifest.data.scripts[script.name] = script.command;
+			const name = script.names[env.scripts];
+			const command = script.command(ignoreFlagsFor(env.ignoreFile));
+			manifest.data.scripts[name] = command;
 			changed = true;
-			results.push({ area: "script", name: script.name, level: "added", message: script.command });
+			results.push({ area: "script", name, level: "added", message: command });
 		}
 	}
-	if (changed && !dryRun) writeFileSync(manifest.file, `${JSON.stringify(manifest.data, null, manifest.indent)}\n`);
+	if (changed && !env.dryRun) writeFileSync(manifest.file, `${JSON.stringify(manifest.data, null, manifest.indent)}\n`);
+	if (!hasConfigsDependency(manifest.data) && !(!usesPnpm(dir, env) && hasConfigsDependency(readRootManifest(env)))) {
+		results.push({
+			area: "dependency",
+			name: "@cldmv/configs",
+			level: "hint",
+			message: `not installed yet; install it (init never installs): ${installCommand(dir, env, manifest.data)}`
+		});
+	}
 	return { results, ok: true };
 }
 
 /**
  * Reports drift from the shared configs without writing.
- * @param {string} cwd - Consumer repository root.
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
  * @returns {{ results: Result[], ok: boolean }} One result per check; `ok` is false when a problem was found.
  */
-function check(cwd) {
-	const manifest = readManifest(cwd);
+function check(dir, env) {
+	const manifest = readManifest(dir);
 	/** @type {Result[]} */
 	const results = [];
+	let importsConfigs = false;
 	for (const stub of STUBS) {
-		const target = path.join(cwd, stub.file);
+		const target = path.join(dir, stub.file);
 		if (!existsSync(target))
 			results.push({ area: "file", name: stub.file, level: "problem", message: "missing; run `cldmv-configs init`" });
-		else if (!stub.reference.test(readFileSync(target, "utf8"))) {
-			results.push({ area: "file", name: stub.file, level: "problem", message: "no longer references the @cldmv/configs base" });
-		} else results.push({ area: "file", name: stub.file, level: "ok", message: "references the @cldmv/configs base" });
+		else {
+			const text = readFileSync(target, "utf8");
+			importsConfigs ||= /@cldmv\/configs/.test(text);
+			if (!stub.reference.test(text)) {
+				results.push({ area: "file", name: stub.file, level: "problem", message: "no longer references the @cldmv/configs base" });
+			} else results.push({ area: "file", name: stub.file, level: "ok", message: "references the @cldmv/configs base" });
+		}
 	}
-	const ignorePath = path.join(cwd, ".prettierignore");
+	const name = env.ignoreFile;
+	const ignorePath = path.join(dir, name);
 	if (!existsSync(ignorePath)) {
-		results.push({ area: "ignore", name: ".prettierignore", level: "problem", message: "missing; run `cldmv-configs init`" });
+		results.push({ area: "ignore", name, level: "problem", message: "missing; run `cldmv-configs init`" });
 	} else {
 		const lines = readFileSync(ignorePath, "utf8").split("\n");
 		const block = findBlock(lines);
 		if (block.state !== "ok") {
 			results.push({
 				area: "ignore",
-				name: ".prettierignore",
+				name,
 				level: "problem",
 				message: `managed block is absent (${block.reason}), package ships v${shippedPackage.version}; see \`cldmv-configs sync --help\``
 			});
 		} else if (blockText(lines, block).join("\n") !== shippedText.join("\n")) {
 			results.push({
 				area: "ignore",
-				name: ".prettierignore",
+				name,
 				level: "problem",
 				message:
 					block.version === shippedPackage.version
@@ -330,37 +466,55 @@ function check(cwd) {
 		} else if (block.version !== shippedPackage.version) {
 			results.push({
 				area: "ignore",
-				name: ".prettierignore",
+				name,
 				level: "ok",
 				message: `managed block matches the shipped text (marker says v${block.version ?? "unknown"}, package is v${shippedPackage.version})`
 			});
-		} else
-			results.push({ area: "ignore", name: ".prettierignore", level: "ok", message: `managed block matches v${shippedPackage.version}` });
+		} else results.push({ area: "ignore", name, level: "ok", message: `managed block matches v${shippedPackage.version}` });
+	}
+	if (importsConfigs) {
+		const pnpm = usesPnpm(dir, env);
+		const own = hasConfigsDependency(manifest.data);
+		const viaRoot = !pnpm && hasConfigsDependency(readRootManifest(env));
+		if (own) results.push({ area: "dependency", name: "@cldmv/configs", level: "ok", message: "listed in this package's dependencies" });
+		else if (viaRoot)
+			results.push({ area: "dependency", name: "@cldmv/configs", level: "ok", message: "listed in the workspace root's dependencies" });
+		else {
+			results.push({
+				area: "dependency",
+				name: "@cldmv/configs",
+				level: "problem",
+				message: `imported by a .configs/ stub but ${pnpm ? "not in this package's dependencies (pnpm does not hoist it into packages)" : "in no package.json"}; install it: ${installCommand(dir, env, manifest.data)}`
+			});
+		}
 	}
 	const scripts = manifest.data.scripts ?? {};
 	for (const script of SCRIPTS) {
-		const value = scripts[script.name];
-		if (typeof value !== "string")
-			results.push({ area: "script", name: script.name, level: "warning", message: "missing; run `cldmv-configs init`" });
-		else if (!value.includes(script.stub))
-			results.push({ area: "script", name: script.name, level: "warning", message: `does not reference ${script.stub}` });
-		else results.push({ area: "script", name: script.name, level: "ok", message: `references ${script.stub}` });
+		const present = script.aliases.find((alias) => typeof scripts[alias] === "string");
+		if (!present) {
+			results.push({ area: "script", name: script.names[env.scripts], level: "warning", message: "missing; run `cldmv-configs init`" });
+		} else if (!scripts[present].includes(script.stub)) {
+			results.push({ area: "script", name: present, level: "warning", message: `does not reference ${script.stub}` });
+		} else results.push({ area: "script", name: present, level: "ok", message: `references ${script.stub}` });
 	}
 	return { results, ok: !results.some((result) => result.level === "problem") };
 }
 
 /**
- * Rewrites the managed block of `.prettierignore` from the shipped file.
- * @param {string} cwd - Consumer repository root.
- * @param {boolean} dryRun - Write nothing when true.
+ * Rewrites the managed block of the Prettier ignore file from the shipped file.
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
  * @returns {{ results: Result[], ok: boolean, diff?: string[] }} The outcome; `ok` is false when the file has no usable markers.
  */
-function sync(cwd, dryRun) {
-	const target = path.join(cwd, ".prettierignore");
-	const name = ".prettierignore";
+function sync(dir, env) {
+	const name = env.ignoreFile;
+	const target = path.join(dir, name);
 	if (!existsSync(target)) {
 		const fresh = shippedLines.map((line, index) => (index === shippedBlock.open ? versionedBlock()[0] : line)).join("\n");
-		if (!dryRun) writeFileSync(target, fresh);
+		if (!env.dryRun) {
+			mkdirSync(path.dirname(target), { recursive: true });
+			writeFileSync(target, fresh);
+		}
 		return { results: [{ area: "ignore", name, level: "created", message: `created from v${shippedPackage.version}` }], ok: true };
 	}
 	const text = readFileSync(target, "utf8");
@@ -389,7 +543,7 @@ function sync(cwd, dryRun) {
 			results: [{ area: "ignore", name, level: "kept", message: `managed block already matches v${shippedPackage.version}` }],
 			ok: true
 		};
-	if (!dryRun) writeFileSync(target, next);
+	if (!env.dryRun) writeFileSync(target, next);
 	return {
 		results: [
 			{
@@ -407,6 +561,150 @@ function sync(cwd, dryRun) {
 }
 
 /**
+ * Reads the workspace package globs declared in a directory.
+ * @param {string} root - Workspace root.
+ * @returns {string[] | null} The glob patterns, or null when the directory declares no workspace.
+ */
+function workspacePatterns(root) {
+	const yamlFile = path.join(root, "pnpm-workspace.yaml");
+	if (existsSync(yamlFile)) {
+		const patterns = [];
+		let inPackages = false;
+		for (const raw of readFileSync(yamlFile, "utf8").split(/\r?\n/)) {
+			const line = raw.replace(/\s+#.*$/, "");
+			if (/^packages\s*:\s*$/.test(line)) inPackages = true;
+			else if (/^packages\s*:\s*\[/.test(line)) {
+				for (const item of line.slice(line.indexOf("[") + 1, line.lastIndexOf("]")).split(","))
+					patterns.push(item.trim().replace(/^["']|["']$/g, ""));
+				inPackages = false;
+			} else if (inPackages && /^\s*-\s*/.test(line))
+				patterns.push(
+					line
+						.replace(/^\s*-\s*/, "")
+						.trim()
+						.replace(/^["']|["']$/g, "")
+				);
+			else if (inPackages && /^\S/.test(line)) inPackages = false;
+		}
+		return patterns.filter(Boolean);
+	}
+	const manifestFile = path.join(root, "package.json");
+	if (existsSync(manifestFile)) {
+		try {
+			const workspaces = JSON.parse(readFileSync(manifestFile, "utf8")).workspaces;
+			if (Array.isArray(workspaces)) return workspaces;
+			if (Array.isArray(workspaces?.packages)) return workspaces.packages;
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+/**
+ * Converts one glob path segment (`*` wildcards only) into a matcher.
+ * @param {string} segment - A path segment without slashes.
+ * @returns {RegExp} Matches a directory name.
+ */
+const segmentPattern = (segment) => new RegExp(`^${segment.replace(/[.+^${}()|[\]\\?]/g, "\\$&").replace(/\*/g, "[^/]*")}$`);
+
+/**
+ * Lists the directories under a base that match glob segments. `**` matches any number of directory levels, including none; `node_modules` and
+ * `.git` are never entered.
+ * @param {string} base - Absolute directory to start from.
+ * @param {string[]} segments - Remaining glob segments.
+ * @param {Set<string>} found - Collects absolute directory paths.
+ * @returns {void}
+ */
+function matchDirectories(base, segments, found) {
+	if (segments.length === 0) {
+		found.add(base);
+		return;
+	}
+	const [head, ...rest] = segments;
+	const children = () =>
+		readdirSync(base, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory() && entry.name !== "node_modules" && entry.name !== ".git")
+			.map((entry) => entry.name);
+	if (head === "**") {
+		matchDirectories(base, rest, found);
+		for (const child of children()) matchDirectories(path.join(base, child), segments, found);
+	} else if (head.includes("*")) {
+		const pattern = segmentPattern(head);
+		for (const child of children().filter((name) => pattern.test(name))) matchDirectories(path.join(base, child), rest, found);
+	} else if (head !== "node_modules" && existsSync(path.join(base, head))) matchDirectories(path.join(base, head), rest, found);
+}
+
+/**
+ * Finds the workspace packages: directories matching the declared globs (minus `!` exclusions) that have a package.json.
+ * @param {string} root - Workspace root.
+ * @param {boolean} includeRoot - Add the root itself.
+ * @returns {Array<{ dir: string, label: string }>} Packages sorted by label.
+ */
+function discoverPackages(root, includeRoot) {
+	const patterns = workspacePatterns(root);
+	if (patterns === null)
+		throw new UsageError('--workspaces needs a pnpm-workspace.yaml or a package.json with "workspaces" in the current directory');
+	const collect = (list) => {
+		const found = new Set();
+		for (const pattern of list) {
+			const segments = pattern
+				.replace(/^\.\//, "")
+				.replace(/\/+$/, "")
+				.split("/")
+				.filter((segment) => segment !== "" && segment !== ".");
+			if (segments.length > 0) matchDirectories(root, segments, found);
+		}
+		return found;
+	};
+	const included = collect(patterns.filter((pattern) => !pattern.startsWith("!")));
+	for (const excluded of collect(patterns.filter((pattern) => pattern.startsWith("!")).map((pattern) => pattern.slice(1))))
+		included.delete(excluded);
+	included.delete(root);
+	const dirs = [...included].filter((dir) => existsSync(path.join(dir, "package.json")));
+	const packages = dirs.map((dir) => ({ dir, label: path.relative(root, dir).split(path.sep).join("/") }));
+	if (includeRoot && existsSync(path.join(root, "package.json"))) packages.push({ dir: root, label: "." });
+	return packages.sort((a, b) => (a.label === "." ? -1 : b.label === "." ? 1 : a.label.localeCompare(b.label)));
+}
+
+/**
+ * Runs one command in one package directory.
+ * @param {string} command - init, check or sync.
+ * @param {string} dir - Package directory.
+ * @param {Env} env - Run settings.
+ * @returns {{ results: Result[], ok: boolean, diff?: string[] }} The outcome.
+ */
+const runCommand = (command, dir, env) => (command === "init" ? init(dir, env) : command === "check" ? check(dir, env) : sync(dir, env));
+
+const VERBS = { created: "create", added: "add", updated: "update" };
+
+/**
+ * Prints one package's results as plain lines.
+ * @param {{ results: Result[], diff?: string[] }} outcome - The package outcome.
+ * @param {Env} env - Run settings.
+ * @param {string} indent - Prefix for each line.
+ * @returns {void}
+ */
+function printResults(outcome, env, indent = "") {
+	for (const result of outcome.results) {
+		const label = env.dryRun && VERBS[result.level] ? `would ${VERBS[result.level]}` : result.level;
+		console.log(`${indent}${label.padEnd(8)} ${result.name}: ${result.message}`);
+	}
+	if (outcome.diff) {
+		console.log(`${indent}--- ${env.ignoreFile}\n${indent}+++ shipped managed block`);
+		for (const line of outcome.diff) console.log(`${indent}${line}`);
+	}
+}
+
+/**
+ * Counts results by level.
+ * @param {Result[]} results - Results to count.
+ * @param {string} level - Level to count.
+ * @returns {number} The count.
+ */
+const count = (results, level) => results.filter((result) => result.level === level).length;
+
+/**
  * Entry point.
  * @param {string[]} argv - Arguments after the script name.
  * @returns {number} The exit code.
@@ -414,10 +712,12 @@ function sync(cwd, dryRun) {
 function main(argv) {
 	let json = false;
 	try {
-		const { command, flags } = parseArgs(argv);
+		const { command, flags, values } = parseArgs(argv);
 		json = flags.has("--json");
 		if (command === undefined || command === "help") {
-			if (command === undefined && !flags.has("--help") && flags.size > 0) throw new UsageError(`unknown option ${[...flags][0]}`);
+			if (command === undefined && !flags.has("--help") && flags.size + Object.keys(values).length > 0) {
+				throw new UsageError(`unknown option ${[...flags, ...Object.keys(values)][0]}`);
+			}
 			console.log(HELP.main);
 			return command === undefined && !flags.has("--help") ? 2 : 0;
 		}
@@ -426,31 +726,117 @@ function main(argv) {
 			console.log(HELP[command]);
 			return 0;
 		}
-		const allowed = new Set(["--json", "--help", ...(command === "check" ? ["--strict"] : ["--dry-run"])]);
+		const allowed = new Set(["--json", "--help", "--workspaces", "--root", ...(command === "check" ? ["--strict"] : ["--dry-run"])]);
 		for (const flag of flags) if (!allowed.has(flag)) throw new UsageError(`unknown option ${flag} for "${command}"`);
+		const allowedValues = new Set(["--ignore-file", ...(command === "init" ? ["--scripts"] : [])]);
+		for (const option of Object.keys(values))
+			if (!allowedValues.has(option)) throw new UsageError(`unknown option ${option} for "${command}"`);
+		const scripts = values["--scripts"] ?? "fleet";
+		if (scripts !== "fleet" && scripts !== "prettier") throw new UsageError(`--scripts must be "fleet" or "prettier", not "${scripts}"`);
+		const ignoreFile = (values["--ignore-file"] ?? DEFAULT_IGNORE_FILE).replace(/^\.\//, "");
+		if (path.isAbsolute(ignoreFile) || ignoreFile.split("/").includes(".."))
+			throw new UsageError("--ignore-file must be a path inside the package");
+		const workspaces = flags.has("--workspaces");
+		if (flags.has("--root") && !workspaces) throw new UsageError("--root only applies together with --workspaces");
 		const dryRun = flags.has("--dry-run");
+		const strict = flags.has("--strict");
 		const cwd = process.cwd();
-		const outcome = command === "init" ? init(cwd, dryRun) : command === "check" ? check(cwd) : sync(cwd, dryRun);
-		const warnings = outcome.results.filter((result) => result.level === "warning").length;
-		const problems = outcome.results.filter((result) => result.level === "problem").length;
-		const failed = !outcome.ok || (flags.has("--strict") && warnings > 0);
+		/** @type {Env} */
+		const base = { dryRun, scripts, ignoreFile, workspaceRoot: cwd, label: "." };
+
+		if (!workspaces) {
+			if (workspacePatterns(cwd) !== null) {
+				console.error(
+					"hint: this directory declares a workspace; running on the root package only. Add --workspaces to cover every package."
+				);
+			}
+			const outcome = runCommand(command, cwd, base);
+			const warnings = count(outcome.results, "warning");
+			const problems = count(outcome.results, "problem");
+			const failed = !outcome.ok || (strict && warnings > 0);
+			if (json) {
+				console.log(
+					JSON.stringify({ command, ok: !failed, dryRun, problems, warnings, results: outcome.results, diff: outcome.diff }, null, 2)
+				);
+			} else {
+				printResults(outcome, base);
+				if (command === "check") console.log(`${problems} problem(s), ${warnings} warning(s)`);
+			}
+			return failed ? 1 : 0;
+		}
+
+		const packages = discoverPackages(cwd, flags.has("--root"));
+		if (packages.length === 0) throw new UsageError("the workspace globs match no directory with a package.json");
+		const outcomes = packages.map((pkg) => {
+			const env = { ...base, label: pkg.label };
+			const outcome = runCommand(command, pkg.dir, env);
+			const failed = !outcome.ok || (strict && count(outcome.results, "warning") > 0);
+			return {
+				path: pkg.label,
+				ok: !failed,
+				problems: count(outcome.results, "problem"),
+				warnings: count(outcome.results, "warning"),
+				...outcome,
+				failed
+			};
+		});
+		const failedPackages = outcomes.filter((outcome) => outcome.failed).length;
+		const totals = {
+			packages: outcomes.length,
+			failed: failedPackages,
+			problems: outcomes.reduce((sum, o) => sum + o.problems, 0),
+			warnings: outcomes.reduce((sum, o) => sum + o.warnings, 0)
+		};
 		if (json) {
 			console.log(
-				JSON.stringify({ command, ok: !failed, dryRun, problems, warnings, results: outcome.results, diff: outcome.diff }, null, 2)
+				JSON.stringify(
+					{
+						command,
+						workspaces: true,
+						ok: failedPackages === 0,
+						dryRun,
+						...totals,
+						packages: outcomes.map(({ path: where, ok, problems, warnings, results, diff }) => ({
+							path: where,
+							ok,
+							problems,
+							warnings,
+							results,
+							diff
+						}))
+					},
+					null,
+					2
+				)
 			);
 		} else {
-			const verb = { created: "create", added: "add", updated: "update" };
-			for (const result of outcome.results) {
-				const label = dryRun && verb[result.level] ? `would ${verb[result.level]}` : result.level;
-				console.log(`${label.padEnd(8)} ${result.name}: ${result.message}`);
+			for (const outcome of outcomes) {
+				const created = count(outcome.results, "created");
+				const added = count(outcome.results, "added");
+				const updated = count(outcome.results, "updated");
+				const summary =
+					command === "check"
+						? `${outcome.failed ? "FAIL" : "ok"} (${outcome.problems} problem(s), ${outcome.warnings} warning(s))`
+						: command === "init"
+							? `${dryRun ? "would create" : "created"} ${created} file(s), ${dryRun ? "would add" : "added"} ${added} script(s), kept ${count(outcome.results, "kept")}`
+							: `${outcome.failed ? "FAIL" : "ok"} (${created ? "created" : updated ? "updated" : "unchanged"})`;
+				console.log(`${outcome.path}: ${summary}`);
+				const interesting = { ...outcome, results: outcome.results.filter((result) => !["ok", "kept"].includes(result.level)) };
+				printResults(interesting, { ...base, label: outcome.path }, "  ");
 			}
-			if (outcome.diff) {
-				console.log("--- .prettierignore\n+++ shipped managed block");
-				for (const line of outcome.diff) console.log(line);
+			console.log(
+				`${totals.packages} package(s): ${totals.packages - failedPackages} ok, ${failedPackages} with problems (${totals.problems} problem(s), ${totals.warnings} warning(s))`
+			);
+			const missing = outcomes.filter((outcome) =>
+				outcome.results.some((result) => result.area === "dependency" && ["problem", "hint"].includes(result.level))
+			);
+			if (missing.length > 0 && usesPnpm(cwd, base)) {
+				console.log(
+					`${missing.length} package(s) lack @cldmv/configs; to add it to every package at once: pnpm add -D @cldmv/configs@latest -r`
+				);
 			}
-			if (command === "check") console.log(`${problems} problem(s), ${warnings} warning(s)`);
 		}
-		return failed ? 1 : 0;
+		return failedPackages > 0 ? 1 : 0;
 	} catch (error) {
 		const message = error instanceof UsageError ? error.message : `${/** @type {Error} */ (error).message}`;
 		if (json) console.log(JSON.stringify({ ok: false, error: message }));

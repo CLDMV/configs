@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:46:58-07:00 (1791748018)
+ *	@Last modified time: 2026-10-11T13:10:36-07:00 (1791749436)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -34,7 +34,9 @@ const made = [];
  * @param {string} [manifest] - The package.json text.
  * @returns {string} The repository path.
  */
-function consumer(manifest = '{\n\t"name": "consumer",\n\t"version": "1.0.0"\n}\n') {
+function consumer(
+	manifest = '{\n\t"name": "consumer",\n\t"version": "1.0.0",\n\t"devDependencies": {\n\t\t"@cldmv/configs": "^1.3.0"\n\t}\n}\n'
+) {
 	const dir = mkdtempSync(path.join(scratch, "repo-"));
 	made.push(dir);
 	if (manifest !== null) writeFileSync(path.join(dir, "package.json"), manifest);
@@ -355,5 +357,281 @@ describe("sync", () => {
 		const summary = JSON.parse(run(dir, "sync", "--json").stdout);
 		expect(summary).toMatchObject({ command: "sync", ok: true });
 		expect(summary.results[0]).toMatchObject({ level: "created" });
+	});
+});
+
+/**
+ * Writes a file, creating its folders.
+ * @param {string} dir - Base directory.
+ * @param {string} file - Path relative to the base.
+ * @param {string} content - File content.
+ * @returns {void}
+ */
+function put(dir, file, content) {
+	mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+	writeFileSync(path.join(dir, file), content);
+}
+
+/**
+ * Creates a workspace root with two packages under `packages/`.
+ * @param {"pnpm" | "npm"} manager - Which workspace manifest to write.
+ * @returns {string} The workspace root.
+ */
+function workspace(manager) {
+	const dir = mkdtempSync(path.join(scratch, "ws-"));
+	made.push(dir);
+	if (manager === "pnpm") {
+		put(dir, "pnpm-workspace.yaml", 'packages:\n  - "packages/*"\n  - "!packages/skipped"\n');
+		put(dir, "pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+		put(dir, "package.json", '{\n\t"name": "root",\n\t"private": true\n}\n');
+	} else {
+		put(dir, "package.json", '{\n\t"name": "root",\n\t"private": true,\n\t"workspaces": ["packages/*"]\n}\n');
+	}
+	put(dir, "packages/a/package.json", '{\n\t"name": "@x/a",\n\t"version": "1.0.0"\n}\n');
+	put(dir, "packages/b/package.json", '{\n\t"name": "b",\n\t"version": "1.0.0"\n}\n');
+	put(dir, "packages/skipped/package.json", '{\n\t"name": "skipped"\n}\n');
+	put(dir, "packages/a/node_modules/dep/package.json", '{\n\t"name": "dep"\n}\n');
+	return dir;
+}
+
+/**
+ * Adds @cldmv/configs to a package.json in a workspace.
+ * @param {string} dir - Workspace root.
+ * @param {string} file - package.json path relative to the root.
+ * @returns {void}
+ */
+function addDependency(dir, file) {
+	const manifest = JSON.parse(read(dir, file));
+	manifest.devDependencies = { "@cldmv/configs": "^1.3.0" };
+	writeFileSync(path.join(dir, file), `${JSON.stringify(manifest, null, "\t")}\n`);
+}
+
+describe("workspaces: pnpm", () => {
+	it("init --workspaces --scripts prettier creates the stubs and prettier-named scripts in every package", () => {
+		const dir = workspace("pnpm");
+		const result = run(dir, "init", "--workspaces", "--scripts", "prettier");
+		expect(result.status, result.stderr).toBe(0);
+		expect(result.stdout).toContain("packages/a: created 5 file(s), added 7 script(s), kept 0");
+		expect(result.stdout).toContain("packages/b: created 5 file(s), added 7 script(s), kept 0");
+		expect(result.stdout).toContain("2 package(s)");
+		for (const pkgDir of ["packages/a", "packages/b"]) {
+			for (const file of FILES) expect(existsSync(path.join(dir, pkgDir, file)), `${pkgDir}/${file}`).toBe(true);
+			const scripts = JSON.parse(read(dir, `${pkgDir}/package.json`)).scripts;
+			expect(Object.keys(scripts)).toEqual(["prettier:write", "prettier:check", "lint", "lint:fix", "fix:headers", "test", "coverage"]);
+			expect(scripts).not.toHaveProperty("format");
+			expect(scripts).not.toHaveProperty("format:check");
+		}
+		expect(existsSync(path.join(dir, "packages/skipped/.configs"))).toBe(false);
+		expect(existsSync(path.join(dir, "packages/a/node_modules/dep/.configs"))).toBe(false);
+		expect(existsSync(path.join(dir, ".configs"))).toBe(false);
+		expect(result.stdout).toContain("pnpm add -D @cldmv/configs@latest -r");
+	});
+
+	it("a second init --workspaces keeps everything, and --root adds the root", () => {
+		const dir = workspace("pnpm");
+		run(dir, "init", "--workspaces");
+		const before = read(dir, "packages/a/package.json");
+		const again = run(dir, "init", "--workspaces");
+		expect(again.stdout).toContain("packages/a: created 0 file(s), added 0 script(s), kept 12");
+		expect(read(dir, "packages/a/package.json")).toBe(before);
+		const withRoot = run(dir, "init", "--workspaces", "--root");
+		expect(withRoot.stdout).toContain(".: created 5 file(s)");
+		expect(existsSync(path.join(dir, ".configs/eslint.config.mjs"))).toBe(true);
+	});
+
+	it("check --workspaces reports the missing per-package devDependency with the install command, and passes once it is added", () => {
+		const dir = workspace("pnpm");
+		run(dir, "init", "--workspaces", "--scripts", "prettier");
+		addDependency(dir, "package.json");
+		const failing = run(dir, "check", "--workspaces");
+		expect(failing.status, failing.stdout).toBe(1);
+		expect(failing.stdout).toContain("packages/a: FAIL (1 problem(s), 0 warning(s))");
+		expect(failing.stdout).toContain("pnpm add -D @cldmv/configs@latest --filter @x/a");
+		expect(failing.stdout).toContain("pnpm add -D @cldmv/configs@latest --filter b");
+		expect(failing.stdout).toContain("pnpm does not hoist it into packages");
+		expect(failing.stdout).toContain("2 package(s): 0 ok, 2 with problems");
+		expect(failing.stdout).toContain("pnpm add -D @cldmv/configs@latest -r");
+
+		addDependency(dir, "packages/a/package.json");
+		expect(run(dir, "check", "--workspaces").status).toBe(1);
+		addDependency(dir, "packages/b/package.json");
+		const passing = run(dir, "check", "--workspaces");
+		expect(passing.status, passing.stdout).toBe(0);
+		expect(passing.stdout).toContain("packages/a: ok (0 problem(s), 0 warning(s))");
+		expect(passing.stdout).toContain("2 package(s): 2 ok, 0 with problems");
+	});
+
+	it("--json with --workspaces nests the results per package", () => {
+		const dir = workspace("pnpm");
+		run(dir, "init", "--workspaces");
+		const summary = JSON.parse(run(dir, "check", "--workspaces", "--json").stdout);
+		expect(summary).toMatchObject({ command: "check", workspaces: true, ok: false, packages: expect.any(Array), failed: 2 });
+		expect(summary.packages.map((entry) => entry.path)).toEqual(["packages/a", "packages/b"]);
+		expect(summary.packages[0].results.some((result) => result.area === "dependency" && result.level === "problem")).toBe(true);
+	});
+
+	it("exits 1 when any package has a problem, and sync --workspaces refreshes each package's ignore block", () => {
+		const dir = workspace("pnpm");
+		run(dir, "init", "--workspaces");
+		for (const name of ["a", "b"]) addDependency(dir, `packages/${name}/package.json`);
+		writeFileSync(path.join(dir, "packages/b/.prettierignore"), read(dir, "packages/b/.prettierignore").replace("dist/\n", ""));
+		const drift = run(dir, "check", "--workspaces");
+		expect(drift.status).toBe(1);
+		expect(drift.stdout).toContain("packages/a: ok");
+		expect(drift.stdout).toContain("packages/b: FAIL");
+		expect(run(dir, "sync", "--workspaces", "--dry-run").stdout).toContain("would update");
+		expect(run(dir, "sync", "--workspaces").status).toBe(0);
+		expect(run(dir, "check", "--workspaces").status).toBe(0);
+	});
+
+	it("hints about --workspaces in a workspace root and still runs on the root only", () => {
+		const dir = workspace("pnpm");
+		const result = run(dir, "check");
+		expect(result.stderr).toContain("hint:");
+		expect(result.stderr).toContain("--workspaces");
+		expect(result.stdout).toContain("problem  .configs/fix-headers.json: missing");
+		expect(existsSync(path.join(dir, "packages/a/.configs"))).toBe(false);
+	});
+
+	it("flags a pnpm package that lacks @cldmv/configs even in single-package mode", () => {
+		const dir = consumer('{\n\t"name": "solo"\n}\n');
+		writeFileSync(path.join(dir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n");
+		run(dir, "init");
+		const result = run(dir, "check");
+		expect(result.status).toBe(1);
+		expect(result.stdout).toContain("pnpm add -D @cldmv/configs@latest");
+	});
+});
+
+describe("workspaces: npm", () => {
+	it("accepts a root dependency, because npm hoists it", () => {
+		const dir = workspace("npm");
+		const init = run(dir, "init", "--workspaces");
+		expect(init.status, init.stderr).toBe(0);
+		expect(init.stdout).toContain("packages/skipped: created 5 file(s)");
+		const failing = run(dir, "check", "--workspaces");
+		expect(failing.status).toBe(1);
+		expect(failing.stdout).toContain("npm install --save-dev @cldmv/configs@latest -w @x/a");
+		addDependency(dir, "package.json");
+		const passing = run(dir, "check", "--workspaces");
+		expect(passing.status, passing.stdout).toBe(0);
+	});
+
+	it("reads the workspaces object form and recursive globs, skipping node_modules", () => {
+		const dir = mkdtempSync(path.join(scratch, "ws-"));
+		made.push(dir);
+		put(dir, "package.json", '{\n\t"name": "root",\n\t"workspaces": { "packages": ["libs/**"] }\n}\n');
+		put(dir, "libs/one/package.json", '{\n\t"name": "one"\n}\n');
+		put(dir, "libs/group/two/package.json", '{\n\t"name": "two"\n}\n');
+		put(dir, "libs/one/node_modules/x/package.json", '{\n\t"name": "x"\n}\n');
+		const summary = JSON.parse(run(dir, "check", "--workspaces", "--json").stdout);
+		expect(summary.packages.map((entry) => entry.path)).toEqual(["libs/group/two", "libs/one"]);
+	});
+});
+
+describe("workspace and option errors", () => {
+	it("exits 2 for --workspaces outside a workspace, --root alone and bad option values", () => {
+		const dir = consumer();
+		expect(run(dir, "check", "--workspaces").status).toBe(2);
+		expect(run(dir, "check", "--root").status).toBe(2);
+		expect(run(dir, "init", "--scripts", "bogus").status).toBe(2);
+		expect(run(dir, "check", "--scripts", "prettier").status).toBe(2);
+		expect(run(dir, "init", "--ignore-file").status).toBe(2);
+		expect(run(dir, "init", "--ignore-file", "../outside").status).toBe(2);
+	});
+
+	it("documents the new options in every command's help", () => {
+		for (const command of ["init", "check", "sync"]) {
+			const help = run(consumer(), command, "--help").stdout;
+			expect(help).toContain("--workspaces");
+			expect(help).toContain("--ignore-file");
+		}
+		expect(run(consumer(), "init", "--help").stdout).toContain("--scripts");
+	});
+});
+
+describe("--ignore-file", () => {
+	const nested = ".configs/.prettierignore";
+
+	it("round-trips through init, check and sync, and the Prettier scripts pass --ignore-path", () => {
+		const dir = consumer();
+		const init = run(dir, "init", "--ignore-file", nested);
+		expect(init.status, init.stderr).toBe(0);
+		expect(existsSync(path.join(dir, nested))).toBe(true);
+		expect(existsSync(path.join(dir, ".prettierignore"))).toBe(false);
+		const scripts = JSON.parse(read(dir, "package.json")).scripts;
+		expect(scripts.format).toBe(
+			`prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path ${nested} --write .`
+		);
+		expect(scripts["format:check"]).toBe(
+			`prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path ${nested} --check .`
+		);
+
+		expect(run(dir, "check", "--ignore-file", nested).status).toBe(0);
+		expect(run(dir, "check").status).toBe(1);
+
+		const tail = "\nlocal/\n!tmp/keep/\n";
+		writeFileSync(path.join(dir, nested), `${read(dir, nested).replace("dist/\n", "")}${tail}`);
+		expect(run(dir, "check", "--ignore-file", nested).status).toBe(1);
+		const sync = run(dir, "sync", "--ignore-file", nested);
+		expect(sync.status, sync.stdout).toBe(0);
+		expect(read(dir, nested).endsWith(tail)).toBe(true);
+		expect(run(dir, "check", "--ignore-file", nested).status).toBe(0);
+	});
+
+	it("keeps the default scripts free of --ignore-path", () => {
+		const dir = consumer();
+		run(dir, "init");
+		expect(JSON.parse(read(dir, "package.json")).scripts.format).toBe("prettier --config .configs/prettier.config.mjs --write .");
+	});
+
+	it("applies to every package with --workspaces", () => {
+		const dir = workspace("pnpm");
+		run(dir, "init", "--workspaces", "--ignore-file", nested);
+		expect(existsSync(path.join(dir, "packages/a", nested))).toBe(true);
+		expect(existsSync(path.join(dir, "packages/b", nested))).toBe(true);
+	});
+});
+
+describe("script aliases", () => {
+	it("check accepts format:check and prettier:check as equivalent", () => {
+		const dir = workspace("npm");
+		addDependency(dir, "package.json");
+		run(dir, "init", "--workspaces");
+		const manifest = JSON.parse(read(dir, "packages/b/package.json"));
+		manifest.scripts = Object.fromEntries(
+			Object.entries(manifest.scripts).map(([name, value]) => [
+				name === "format" ? "prettier:write" : name === "format:check" ? "prettier:check" : name,
+				value
+			])
+		);
+		writeFileSync(path.join(dir, "packages/b/package.json"), `${JSON.stringify(manifest, null, "\t")}\n`);
+		const result = run(dir, "check", "--workspaces", "--strict");
+		expect(result.status, result.stdout).toBe(0);
+		expect(result.stdout).toContain("packages/a: ok (0 problem(s), 0 warning(s))");
+		expect(result.stdout).toContain("packages/b: ok (0 problem(s), 0 warning(s))");
+	});
+
+	it("init never adds the other convention's names when one is present", () => {
+		const dir = consumer(
+			'{\n\t"name": "x",\n\t"scripts": {\n\t\t"prettier:write": "prettier --write .",\n\t\t"format:check": "prettier --check ."\n\t}\n}\n'
+		);
+		const result = run(dir, "init", "--scripts", "prettier");
+		expect(result.status).toBe(0);
+		const scripts = JSON.parse(read(dir, "package.json")).scripts;
+		expect(scripts).not.toHaveProperty("format");
+		expect(scripts).not.toHaveProperty("prettier:check");
+		expect(scripts["prettier:write"]).toBe("prettier --write .");
+		expect(result.stdout).toContain("kept     prettier:write: already defined");
+		expect(result.stdout).toContain("kept     format:check: already defined");
+	});
+
+	it("check warns about a detached alias the same way as the fleet name", () => {
+		const dir = consumer(
+			'{\n\t"name": "x",\n\t"devDependencies": { "@cldmv/configs": "^1.3.0" },\n\t"scripts": {\n\t\t"prettier:write": "prettier --write ."\n\t}\n}\n'
+		);
+		run(dir, "init");
+		const result = run(dir, "check");
+		expect(result.stdout).toContain("warning  prettier:write: does not reference .configs/prettier.config.mjs");
 	});
 });

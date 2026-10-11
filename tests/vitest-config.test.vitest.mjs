@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:31:05-07:00 (1791747065)
+ *	@Last modified time: 2026-10-11T13:12:09-07:00 (1791749529)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -49,6 +49,18 @@ describe("vitest.config.mjs", () => {
 		const merged = mergeConfig(base, defineConfig({ test: { coverage: { include: ["src/**"] } } }));
 		expect(merged.test.coverage).toMatchObject({ provider: "v8", include: ["src/**"], reportsDirectory: "coverage" });
 		expect(merged.test.include).toEqual(base.test.include);
+	});
+
+	it("concatenates a repository's own include with the base glob, so a tiered repo drops the base include first", () => {
+		const own = ["tests/unit/**/*.unit.test.vitest.mjs"];
+		const merged = mergeConfig(base, defineConfig({ test: { include: own } }));
+		expect(merged.test.include).toEqual([...base.test.include, ...own]);
+
+		const test = { ...base.test };
+		delete test.include;
+		const tiered = mergeConfig({ ...base, test }, defineConfig({ test: { include: own } }));
+		expect(tiered.test.include).toEqual(own);
+		expect(tiered.test.coverage.provider).toBe("v8");
 	});
 
 	it("is what this repository's own config builds on", () => {
