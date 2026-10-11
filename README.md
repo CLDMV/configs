@@ -1,10 +1,10 @@
 # @cldmv/configs
 
-**@cldmv/configs** is the single source of CLDMV's shared tool configurations. Every CLDMV repository runs the same tools with the same house settings; instead of copying those settings into each repository, where the copies drift apart, the canonical versions live here as plain JSON files that each repository extends.
+**@cldmv/configs** is the single source of CLDMV's shared tool configurations. Every CLDMV repository runs the same tools with the same house settings; instead of copying those settings into each repository, where the copies drift apart, the canonical versions live here as shared config files that each repository extends.
 
 A repository points its tool at the shared file and keeps only its own overrides locally. When a house setting changes, it changes here once, and every repository picks it up on its next update.
 
-The package has no runtime code and no dependencies. It ships the config files, this README, the license and `package.json`, and nothing else. The one peer dependency, `@cldmv/prettier-plugin-jsonv`, is optional and only matters to repositories that format `.jsonv` files.
+Most of the configs are plain JSON (`fix-headers.json`, `prettier.json`) and one is a plain ignore list (`prettierignore`). Two are small ES modules, because ESLint and Vitest configs are code: `eslint.config.mjs` exports the flat config as an array and imports the ESLint plugins it needs, and `vitest.config.mjs` exports a plain settings object with no imports. The package therefore has real dependencies: the six ESLint plugin packages that `eslint.config.mjs` imports (`@eslint/js`, `@eslint/json`, `@eslint/markdown`, `@eslint/css`, `@cldmv/eslint-plugin-jsonv` and `globals`) are regular `dependencies`, and `eslint`, `vitest` and `@cldmv/prettier-plugin-jsonv` are optional peers that only matter to repositories using the matching config. It ships the config files, this README, the license and `package.json`, and nothing else.
 
 [![npm version]][npm_version_url] [![npm downloads]][npm_downloads_url] [![Last commit]][last_commit_url] [![npm last update]][npm_last_update_url] [![coverage]][coverage_url]
 
@@ -16,7 +16,8 @@ The package has no runtime code and no dependencies. It ships the config files, 
 
 ### Latest: v1.3.0 (October 2026)
 
-- **Shared Prettier config** — new `prettier.json`, CLDMV's house formatting (tabs, 140 columns, preserved quote props and prose wrapping, the jsonv parser for `.jsonv` files), available as `@cldmv/configs/prettier.json`. Extend it from `.configs/prettier.config.mjs`. The jsonv plugin is an optional peer dependency: install `@cldmv/prettier-plugin-jsonv` only if the repository formats `.jsonv` files. This repository now formats itself with the file it publishes. `fix-headers.json` is unchanged.
+- **Four new shared configs** — `prettier.json` (CLDMV's house formatting: tabs, 140 columns, preserved quote props and prose wrapping, the jsonv parser for `.jsonv` files), `prettierignore` (the paths every repository keeps out of Prettier), `eslint.config.mjs` (the fleet's flat ESLint config as an array to spread) and `vitest.config.mjs` (a base settings object to merge). Use them as `@cldmv/configs/prettier.json`, `@cldmv/configs/prettierignore`, `@cldmv/configs/eslint.config.mjs` and `@cldmv/configs/vitest.config.mjs`. This repository now lints, formats and tests itself with the files it publishes.
+- **The package gains dependencies** — the six ESLint plugin packages that `eslint.config.mjs` imports are now regular `dependencies`; `eslint`, `vitest` and `@cldmv/prettier-plugin-jsonv` are optional peers. `fix-headers.json` is unchanged.
 - [View full v1.3.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md)
 
 ### Recent Releases
@@ -33,8 +34,8 @@ The package has no runtime code and no dependencies. It ships the config files, 
 ## 🚀 Key Features
 
 - **One source of truth** — each house setting is defined once, here, instead of in a copy per repository.
-- **Plain JSON** — no runtime code and no dependencies; the tool reads the file directly. The jsonv Prettier plugin is an optional peer, needed only to format `.jsonv` files.
-- **Two ways to consume it** — by package specifier through `package.json` `exports` (`@cldmv/configs/fix-headers.json`, `@cldmv/configs/prettier.json`), or by a raw GitHub URL pinned to a release tag.
+- **Plain files, almost no code** — JSON for fix-headers and Prettier, a plain list for the Prettier ignore, and two small modules for ESLint and Vitest. The ESLint plugins the base imports are the package's only dependencies; `eslint`, `vitest` and the jsonv Prettier plugin are optional peers.
+- **Two ways to consume it** — by package specifier through `package.json` `exports` (`@cldmv/configs/fix-headers.json`, `@cldmv/configs/prettier.json`, `@cldmv/configs/eslint.config.mjs`, ...), or by a raw GitHub URL pinned to a release tag.
 - **Local overrides** — a repository's own config extends the shared file and overrides only the keys that are genuinely specific to it.
 - **Tested** — the suite checks that every exported file parses, that every `exports` entry ships, that the settings are ones the tool accepts, and that `npm pack` publishes exactly the intended files.
 
@@ -46,14 +47,19 @@ The package has no runtime code and no dependencies. It ships the config files, 
 
 - A tool that can extend a shared config. For fix-headers that is **v2.0.0 or later**: `extends` arrives in [CLDMV/fix-headers#88](https://github.com/CLDMV/fix-headers/pull/88), and several of the options this config sets (`fixCreatedDate`, `normalizeDateFormat`, `strictCreatedDate`) in [CLDMV/fix-headers#67](https://github.com/CLDMV/fix-headers/pull/67). Older releases cannot resolve `extends` and ignore those options. Use **v2.2.0 or later** for the author rules: from 2.2.0, `@Last modified by` changes only when a file's content was edited ([CLDMV/fix-headers#128](https://github.com/CLDMV/fix-headers/pull/128)).
 - For `prettier.json`, **Prettier 3** with a config file that can import JSON (`prettier.config.mjs`). Repositories that format `.jsonv` files also install [`@cldmv/prettier-plugin-jsonv`](https://github.com/CLDMV/prettier-plugin-jsonv), an optional peer dependency of this package.
+- For `eslint.config.mjs`, **ESLint 10** (`eslint/config` supplies `defineConfig`, and the `@eslint/js` it uses requires ESLint 10) and a flat config file that can import an ES module.
+- For `vitest.config.mjs`, **Vitest 5** and a Vitest config file that can import an ES module. Coverage with the `v8` provider also needs `@vitest/coverage-v8` at the Vitest version.
+- A Node.js release that can `import` JSON with `with { type: "json" }`.
 
 ### Install
 
 Install the package as a devDependency next to the tool it configures:
 
 ```sh
-npm install --save-dev @cldmv/configs@latest @cldmv/fix-headers@latest prettier@latest
+npm install --save-dev @cldmv/configs@latest @cldmv/fix-headers@latest prettier@latest eslint@latest vitest@latest @vitest/coverage-v8@latest
 ```
+
+Install only the tools whose config the repository uses. `@cldmv/configs` itself brings the ESLint plugins that `eslint.config.mjs` imports; they are its dependencies, so nothing else needs installing for ESLint.
 
 A repository that formats `.jsonv` files also installs the jsonv plugin, the optional peer dependency that `prettier.json` loads:
 
@@ -107,11 +113,13 @@ Point the npm scripts at it:
 ```json
 {
 	"scripts": {
-		"format": "prettier --config .configs/prettier.config.mjs --write .",
-		"format:check": "prettier --config .configs/prettier.config.mjs --check ."
+		"format": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --check ."
 	}
 }
 ```
+
+The `--ignore-path` flags are explained in [Prettier ignore](#prettier-ignore) below.
 
 `prettier.json` loads `@cldmv/prettier-plugin-jsonv`, so a repository that formats `.jsonv` files installs that plugin alongside this package. A repository with no `.jsonv` files does not need the plugin: spread the base and drop `plugins` and the jsonv override.
 
@@ -128,20 +136,93 @@ export default {
 Preview the first run before writing anything, then apply it. A first run can reformat many files, so land it when no open pull request touches the same files.
 
 ```sh
-npx prettier --config .configs/prettier.config.mjs --check .
+npx prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path node_modules/@cldmv/configs/prettierignore --check .
 npm run format
 ```
+
+### Prettier ignore
+
+Prettier has no way to extend another ignore file, so the shared list is used in one of two ways. A repository with no ignore rules of its own points Prettier straight at the installed file, in addition to `.gitignore`, which Prettier stops reading once `--ignore-path` is given:
+
+```json
+{
+	"scripts": {
+		"format": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path node_modules/@cldmv/configs/prettierignore --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path node_modules/@cldmv/configs/prettierignore --check ."
+	}
+}
+```
+
+A repository with paths of its own copies the file to `.prettierignore` and appends them below the marker line at the end. Prettier reads `.prettierignore` by default, and editors that run Prettier read it too, which the `--ignore-path` form does not give them:
+
+```sh
+cp node_modules/@cldmv/configs/prettierignore .prettierignore
+```
+
+The copy no longer follows later changes to the shared list. Refresh it by copying again and re-adding the repository's own lines below the marker.
+
+### ESLint
+
+Create the repository's own config, `.configs/eslint.config.mjs`, spreading the shared array and appending the repository's own blocks:
+
+```js
+import base from "@cldmv/configs/eslint.config.mjs";
+
+export default [
+	...base,
+	{
+		files: ["src/**/*.mjs"],
+		rules: { "no-console": "warn" }
+	}
+];
+```
+
+Add the npm scripts:
+
+```json
+{
+	"scripts": {
+		"lint": "eslint --config .configs/eslint.config.mjs .",
+		"lint:fix": "eslint --config .configs/eslint.config.mjs . --fix"
+	}
+}
+```
+
+A repository that needs an extra ignore (a generated folder, a `bin/` output) adds a block with only `ignores`: `{ ignores: ["bin/**"] }`. The base ignores `.configs/**`, so the config files themselves are not linted.
+
+### Vitest
+
+Create the repository's own config, `.configs/vitest.config.mjs`, merging its settings over the shared base:
+
+```js
+import { defineConfig, mergeConfig } from "vitest/config";
+import base from "@cldmv/configs/vitest.config.mjs";
+
+export default mergeConfig(
+	base,
+	defineConfig({
+		test: {
+			coverage: { include: ["src/**"] }
+		}
+	})
+);
+```
+
+Run Vitest with `--config .configs/vitest.config.mjs`. `mergeConfig` concatenates arrays, so a repository's `include` or `coverage.reporter` adds to the base entries instead of replacing them.
 
 ---
 
 ## 📋 Configs
 
-| File                                   | Tool                                                         | Specifier                         | What it sets                                                                                                       |
-| -------------------------------------- | ------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| [`fix-headers.json`](fix-headers.json) | [`@cldmv/fix-headers`](https://github.com/CLDMV/fix-headers) | `@cldmv/configs/fix-headers.json` | CLDMV's standard file-header options: author and company identity, copyright range, and the created-date checks    |
-| [`prettier.json`](prettier.json)       | [`prettier`](https://prettier.io)                            | `@cldmv/configs/prettier.json`    | CLDMV's house formatting: tabs, a 140-column width, preserved quote props and prose wrapping, and the jsonv plugin |
+| File                                     | Tool                                                         | Specifier                          | What it sets                                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------ | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [`fix-headers.json`](fix-headers.json)   | [`@cldmv/fix-headers`](https://github.com/CLDMV/fix-headers) | `@cldmv/configs/fix-headers.json`  | CLDMV's standard file-header options: author and company identity, copyright range, and the created-date checks                        |
+| [`prettier.json`](prettier.json)         | [`prettier`](https://prettier.io)                            | `@cldmv/configs/prettier.json`     | CLDMV's house formatting: tabs, a 140-column width, preserved quote props and prose wrapping, and the jsonv plugin                     |
+| [`prettierignore`](prettierignore)       | [`prettier`](https://prettier.io)                            | `@cldmv/configs/prettierignore`    | The paths every repository keeps out of Prettier: dependencies, build output, scratch folders, lockfiles, minified files and YAML      |
+| [`eslint.config.mjs`](eslint.config.mjs) | [`eslint`](https://eslint.org)                               | `@cldmv/configs/eslint.config.mjs` | CLDMV's flat ESLint config as an array: JavaScript, JSON, jsonv, Markdown and CSS blocks, house `no-unused-vars` pattern, test globals |
+| [`vitest.config.mjs`](vitest.config.mjs) | [`vitest`](https://vitest.dev)                               | `@cldmv/configs/vitest.config.mjs` | CLDMV's base Vitest settings as a plain object: test file pattern, node environment, v8 coverage and its reporters                     |
 
-Each file is exposed through `package.json` `exports`, so it resolves by its specifier from any project that installs the package, and is also reachable by URL straight from this repository.
+Each file is exposed through `package.json` `exports`, so it resolves by its specifier from any project that installs the package, and is also reachable by URL straight from this repository. The two `.mjs` files are ES modules and `eslint.config.mjs` imports the ESLint plugins from the package's dependencies, so use them through the installed package; the raw-URL form only suits the plain-data files.
 
 ---
 
@@ -258,7 +339,7 @@ Keep overrides to what is genuinely specific to the repository. A setting every 
 | `overrides` for `*.jsonv` | `parser: "jsonv"`                  | Parse `.jsonv` files with the jsonv plugin's parser                                                                           |
 | `plugins`                 | `["@cldmv/prettier-plugin-jsonv"]` | Load the jsonv plugin, which provides that parser. An optional peer dependency of this package                                |
 
-YAML is not configured here. CI workflow files are four-space indented by convention and YAML forbids tabs, so repositories list `*.yml` and `*.yaml` in their `.prettierignore` rather than have Prettier reindent every workflow.
+YAML is not configured here. CI workflow files are four-space indented by convention and YAML forbids tabs, so repositories keep `*.yml` and `*.yaml` out of Prettier with the shared [`prettierignore`](#-prettierignore) rather than have it reindent every workflow.
 
 ### The jsonv plugin is optional
 
@@ -282,10 +363,91 @@ This repository uses the file the same way: its `.configs/prettier.config.mjs` r
 
 ---
 
+## 🙈 prettierignore
+
+```text
+node_modules/
+dist/
+build/
+coverage/
+tmp/
+trash/
+package-lock.json
+pnpm-lock.yaml
+*.min.*
+*.yml
+*.yaml
+```
+
+The file in the repository carries a one-line comment above each group; the list above is the patterns only.
+
+| Pattern                               | Why it is ignored                                                                                                                       |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `node_modules/`                       | Installed dependencies                                                                                                                  |
+| `dist/`, `build/`, `coverage/`        | Build and test output, not hand-authored                                                                                                |
+| `tmp/`, `trash/`                      | Scratch and discarded work                                                                                                              |
+| `package-lock.json`, `pnpm-lock.yaml` | Generated by the package manager                                                                                                        |
+| `*.min.*`                             | Minified or compact generated files of any extension (`*.min.js`, `*.min.css`, `*.min.json`); name compact data files `<name>.min.json` |
+| `*.yml`, `*.yaml`                     | CI workflow files are four-space indented and YAML forbids tabs, so Prettier at `tabWidth` 2 would reindent every workflow              |
+
+The file ends with the marker line `# --- repository-specific paths below this line ---`. A repository that copies the file to `.prettierignore` appends its own paths (generated data folders, intentional-error fixtures) after it. See [Prettier ignore](#prettier-ignore) under Quick Start for the copy and `--ignore-path` forms.
+
+---
+
+## 🧹 eslint.config.mjs
+
+The module default-exports an array of flat-config blocks built with `defineConfig` from `eslint/config`. Spread it into the repository's own array and append blocks after it, as in the [ESLint](#eslint) Quick Start.
+
+| Block (files)                           | What it sets                                                                                                                                                                                                     |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ignores                                 | `tmp/`, `trash/`, `node_modules/`, `dist/`, `build/`, `.git/`, `.configs/`, `.vscode/`, `coverage/`, minified files, `package-lock.json` and "copy" duplicates of files and folders                              |
+| `**/*.{js,mjs,cjs}`                     | `@eslint/js` recommended, with `no-unused-vars` ignoring names that match `^(_\|___.*)$` (a lone `_`, or three or more leading underscores) for variables, arguments, caught errors and destructured array items |
+| `**/*.js`                               | `sourceType: "commonjs"`; `.mjs` files stay ES modules                                                                                                                                                           |
+| `**/*.{js,mjs,cjs}`                     | Node and browser globals (`globals.node` and `globals.browser`)                                                                                                                                                  |
+| `tests/**/*.test.vitest.mjs`            | The Vitest globals `describe`, `it`, `test`, `expect`, `vi`, `beforeAll`, `beforeEach`, `afterAll` and `afterEach`                                                                                               |
+| `**/*.json`, `**/*.jsonc`, `**/*.json5` | `@eslint/json` recommended, parsing each as JSON, JSONC or JSON5                                                                                                                                                 |
+| `**/*.jsonv`                            | `@cldmv/eslint-plugin-jsonv` recommended, with `language: "jsonv/jsonv"`                                                                                                                                         |
+| `**/*.md`                               | `@eslint/markdown` recommended on GitHub-flavoured Markdown, with `markdown/no-missing-label-refs` off because GitHub alerts such as `[!NOTE]` trip it                                                           |
+| `**/*.css`                              | `@eslint/css` recommended                                                                                                                                                                                        |
+
+There is no HTML block: linting HTML is specific to a few repositories, which add a block of their own. The ESLint plugins and `globals` are dependencies of this package, so a repository does not install them itself.
+
+---
+
+## 🧪 vitest.config.mjs
+
+The module default-exports a plain object with no imports, so it needs nothing installed and can be merged into any Vitest config with `mergeConfig`, as in the [Vitest](#vitest) Quick Start.
+
+```js
+export default {
+	test: {
+		environment: "node",
+		include: ["tests/**/*.test.vitest.{js,mjs,cjs}"],
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "json", "json-summary", "lcov"],
+			reportsDirectory: "coverage"
+		}
+	}
+};
+```
+
+| Option                           | Value                                      | Effect                                                                                                                                                      |
+| -------------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `test.environment`               | `"node"`                                   | Run tests in Node.js                                                                                                                                        |
+| `test.include`                   | `["tests/**/*.test.vitest.{js,mjs,cjs}"]`  | Test files live under `tests/` and are named `*.test.vitest.<ext>`, the fleet-wide naming                                                                   |
+| `test.coverage.provider`         | `"v8"`                                     | Measure coverage with V8's built-in collector (needs `@vitest/coverage-v8`)                                                                                 |
+| `test.coverage.reporter`         | `["text", "json", "json-summary", "lcov"]` | Console table, the raw and summary JSON that CI's coverage badge and PR comment read (`coverage/coverage-summary.json`), and lcov for editors and uploaders |
+| `test.coverage.reportsDirectory` | `"coverage"`                               | Write reports to `coverage/`, which `.gitignore` and the Prettier ignore already exclude                                                                    |
+
+Coverage `include` and `exclude` globs, thresholds, `root`, timeouts and reporters are repository-specific and stay in the repository's own config. `mergeConfig` concatenates arrays, so a repository that lists its own `coverage.reporter` entries adds to these four.
+
+---
+
 ## ➕ Adding a config
 
-1. Add the file at the package root, named after the tool it configures (`<tool>.json`).
-2. List it in `package.json` `files` and expose it in `exports` as `"./<tool>.json": "./<tool>.json"`.
+1. Add the file at the package root, named after the tool it configures (`<tool>.json`, or the filename the tool expects for an ESLint or Vitest module). Keep any imports it needs to a minimum, and add those packages to `dependencies`; add the tool itself as an optional peer.
+2. List it in `package.json` `files` and expose it in `exports` under its own filename (`"./<tool>.json": "./<tool>.json"`).
 3. Add it to `dist_paths` in `.github/workflows/bundle-size.yml`.
 4. Add a row to the [Configs](#-configs) table and a section describing its keys.
 5. Add tests under `tests/` that check the keys against what the tool accepts.
