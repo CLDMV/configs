@@ -17,8 +17,8 @@ Most of the configs are plain JSON (`fix-headers.json`, `prettier.json`) and one
 ### Latest: v1.3.0 (October 2026)
 
 - **Four new shared configs** — `prettier.json` (CLDMV's house formatting: tabs, 140 columns, preserved quote props and prose wrapping, the jsonv parser for `.jsonv` files), `prettierignore` (the paths every repository keeps out of Prettier), `eslint.config.mjs` (the fleet's flat ESLint config as an array to spread) and `vitest.config.mjs` (a base settings object to merge). Use them as `@cldmv/configs/prettier.json`, `@cldmv/configs/prettierignore`, `@cldmv/configs/eslint.config.mjs` and `@cldmv/configs/vitest.config.mjs`. This repository now lints, formats and tests itself with the files it publishes.
-- **`cldmv-configs` CLI** — `npx cldmv-configs init` creates the `.configs/` stubs, `.prettierignore` and standard npm scripts without overwriting anything, `check` reports drift (exit `1`) for CI and fleet sweeps, and `sync` refreshes the managed block of `.prettierignore` while leaving the repository's own lines alone.
-- **The package gains dependencies** — the six ESLint plugin packages that `eslint.config.mjs` imports are now regular `dependencies`; `eslint`, `vitest` and `@cldmv/prettier-plugin-jsonv` are optional peers. `fix-headers.json` is unchanged.
+- **`cldmv-configs` CLI** — `npx cldmv-configs init` creates the `.configs/` stubs, `.prettierignore` and standard npm scripts without overwriting anything, `check` reports drift (exit `1`) for CI and fleet sweeps, and `sync` refreshes the managed block of `.prettierignore` while leaving the repository's own lines alone. It serves workspace monorepos too: `--workspaces` runs any command in every package (pnpm and npm workspaces), `--ignore-file` moves the ignore block (for example to `.configs/.prettierignore`), `--scripts prettier` names the Prettier scripts `prettier:write` and `prettier:check` (and `check` accepts both naming pairs), and `check` flags a package that imports `@cldmv/configs` without depending on it, which pnpm requires per package.
+- **The package gains dependencies** — the six ESLint plugin packages that `eslint.config.mjs` imports are now regular `dependencies`; `eslint`, `vitest` (4 or 5) and `@cldmv/prettier-plugin-jsonv` are optional peers. `fix-headers.json` is unchanged.
 - [View full v1.3.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md)
 
 ### Recent Releases
@@ -50,7 +50,7 @@ Most of the configs are plain JSON (`fix-headers.json`, `prettier.json`) and one
 - A tool that can extend a shared config. For fix-headers that is **v2.0.0 or later**: `extends` arrives in [CLDMV/fix-headers#88](https://github.com/CLDMV/fix-headers/pull/88), and several of the options this config sets (`fixCreatedDate`, `normalizeDateFormat`, `strictCreatedDate`) in [CLDMV/fix-headers#67](https://github.com/CLDMV/fix-headers/pull/67). Older releases cannot resolve `extends` and ignore those options. Use **v2.2.0 or later** for the author rules: from 2.2.0, `@Last modified by` changes only when a file's content was edited ([CLDMV/fix-headers#128](https://github.com/CLDMV/fix-headers/pull/128)).
 - For `prettier.json`, **Prettier 3** with a config file that can import JSON (`prettier.config.mjs`). Repositories that format `.jsonv` files also install [`@cldmv/prettier-plugin-jsonv`](https://github.com/CLDMV/prettier-plugin-jsonv), an optional peer dependency of this package.
 - For `eslint.config.mjs`, **ESLint 10** (`eslint/config` supplies `defineConfig`, and the `@eslint/js` it uses requires ESLint 10) and a flat config file that can import an ES module.
-- For `vitest.config.mjs`, **Vitest 5** and a Vitest config file that can import an ES module. Coverage with the `v8` provider also needs `@vitest/coverage-v8` at the Vitest version.
+- For `vitest.config.mjs`, **Vitest 4 or 5** (the `peerDependencies` range is `^4.0.0 || ^5.0.0`; the base uses only options both versions accept) and a Vitest config file that can import an ES module. Coverage with the `v8` provider also needs `@vitest/coverage-v8` at the Vitest version.
 - A Node.js release that can `import` JSON with `with { type: "json" }`.
 
 ### Install
@@ -83,11 +83,11 @@ npx cldmv-configs init
 
 `init` creates, only where the file is missing and never overwriting, `.configs/fix-headers.json`, `.configs/prettier.config.mjs`, `.configs/eslint.config.mjs`, `.configs/vitest.config.mjs` and `.prettierignore`, then adds the standard npm scripts (`format`, `format:check`, `lint`, `lint:fix`, `fix:headers`, `test`, `coverage`) to `package.json`. An existing file or script is reported as `kept` and never changed. `package.json` keeps its indentation and key order, but it is re-serialized when scripts are added, so an inline array such as `"files": ["a", "b"]` is expanded until `npm run format` collapses it again. Every created, added and kept item is printed. `--dry-run` prints the same list and writes nothing.
 
-| Command               | What it does                                                                                                                                                                                                                                                                                                   | Exit codes                                                                 |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `cldmv-configs init`  | Creates the missing stubs and `.prettierignore`, and adds the missing standard scripts                                                                                                                                                                                                                         | `0` ok, `2` usage or I/O error                                             |
-| `cldmv-configs check` | Reports drift without writing: each stub exists and still references the `@cldmv/configs` base, the `.prettierignore` managed block matches the shipped one (these are problems), and each standard script exists and references its stub (these are warnings). It never judges the repository's own additions | `0` ok, `1` problems (or warnings with `--strict`), `2` usage or I/O error |
-| `cldmv-configs sync`  | Rewrites only the managed block of `.prettierignore` from the shipped file, leaving every byte outside the markers alone. It refuses (exit `1`, with a diff) when the file has no markers                                                                                                                      | `0` ok, `1` refused, `2` usage or I/O error                                |
+| Command               | What it does                                                                                                                                                                                                                                                                                                                                                              | Exit codes                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `cldmv-configs init`  | Creates the missing stubs and `.prettierignore`, and adds the missing standard scripts                                                                                                                                                                                                                                                                                    | `0` ok, `2` usage or I/O error                                             |
+| `cldmv-configs check` | Reports drift without writing: each stub exists and still references the `@cldmv/configs` base, the `.prettierignore` managed block matches the shipped one, and `@cldmv/configs` is installed where a stub imports it (these are problems), and each standard script exists and references its stub (these are warnings). It never judges the repository's own additions | `0` ok, `1` problems (or warnings with `--strict`), `2` usage or I/O error |
+| `cldmv-configs sync`  | Rewrites only the managed block of `.prettierignore` from the shipped file, leaving every byte outside the markers alone. It refuses (exit `1`, with a diff) when the file has no markers                                                                                                                                                                                 | `0` ok, `1` refused, `2` usage or I/O error                                |
 
 Every command takes `--help`, and `--json` prints a machine-readable summary instead of plain lines. `check` is meant for CI and fleet sweeps: it exits `1` on drift and prints one line per item. `sync` is for the ignore list only; the stubs extend the shared files at run time, so a new release needs no sync for them.
 
@@ -96,6 +96,8 @@ npx cldmv-configs check            # CI: exit 1 on drift
 npx cldmv-configs check --strict   # also fail on missing or detached scripts
 npx cldmv-configs sync --dry-run   # preview the ignore-list refresh
 ```
+
+`init` takes `--scripts prettier` to name the Prettier scripts `prettier:write` and `prettier:check` instead of `format` and `format:check`; `check` accepts either pair as equivalent. `--ignore-file <path>` moves the managed ignore block (see [Prettier ignore](#prettier-ignore)). `check` also reports, as a problem, a package whose `.configs/` stub imports `@cldmv/configs` while the package does not depend on it, and prints the install command (the CLI never installs anything). In a workspace, `--workspaces` runs any command in every package; see [Monorepos](#-monorepos).
 
 The sections below show what `init` creates and how to set each tool up by hand.
 
@@ -184,6 +186,8 @@ Prettier has no way to extend another ignore file, so the shared list lives in a
 The rule is simple: everything between the two marker lines belongs to the package and is replaced on every `sync`; everything outside them belongs to the repository and is never touched. Add the repository's own paths below the closing marker, and use `!path` there to re-include something the block ignores. The version in the opening marker is the package version at the time of the sync. `check` compares the block text (not the version) with the shipped block and exits `1` if they differ, so an edit inside the markers is caught. Because `.prettierignore` is a normal file in the repository, Prettier and editors that format on save read it with no flags.
 
 A `.prettierignore` that already exists without markers is never rewritten: `sync` refuses, prints the diff between the file and the shipped block, and exits `1`. Add the two marker lines around the shared lines (or rename the file and run `init`, then move the repository's own lines below the closing marker), then sync again. This repository keeps its `.prettierignore` the same way, and a test checks that its managed block equals the shipped one.
+
+The managed block can live somewhere other than `.prettierignore`: `--ignore-file .configs/.prettierignore` makes `init`, `check` and `sync` use that path, and `init` then writes the Prettier scripts with `--ignore-path .gitignore --ignore-path .configs/.prettierignore`. Prettier resolves the patterns relative to the ignore file's folder and still matches `dist/` at the repository root.
 
 The alternative, for a repository with no ignore rules of its own that does not need editor support, is to point Prettier at the installed file in the npm scripts. `--ignore-path` replaces Prettier's defaults, so `.gitignore` is passed explicitly as well:
 
@@ -477,7 +481,98 @@ export default {
 | `test.coverage.reporter`         | `["text", "json", "json-summary", "lcov"]` | Console table, the raw and summary JSON that CI's coverage badge and PR comment read (`coverage/coverage-summary.json`), and lcov for editors and uploaders |
 | `test.coverage.reportsDirectory` | `"coverage"`                               | Write reports to `coverage/`, which `.gitignore` and the Prettier ignore already exclude                                                                    |
 
+Vitest 4 and 5 are both supported (`peerDependencies.vitest` is `^4.0.0 || ^5.0.0`); the base was checked under 4.1 and 5.0.
+
+A monorepo that already has a shared Vitest helper of its own (a workspace package, for example) should merge the base for the coverage provider and reporters and keep its own `test.include`. The base's `tests/**/*.test.vitest.{js,mjs,cjs}` glob would pull every test tier into one run, which is wrong when the repository splits tiers by directory (unit tests against docker-backed integration tests, say). `mergeConfig` concatenates `include`, so to keep only your own globs set them on the base copy instead of merging over it:
+
+```js
+import { defineConfig, mergeConfig } from "vitest/config";
+import base from "@cldmv/configs/vitest.config.mjs";
+
+const test = { ...base.test };
+delete test.include;
+
+export default mergeConfig({ ...base, test }, defineConfig({ test: { include: ["tests/unit/**/*.unit.test.vitest.mjs"] } }));
+```
+
 Coverage `include` and `exclude` globs, thresholds, `root`, timeouts and reporters are repository-specific and stay in the repository's own config. `mergeConfig` concatenates arrays, so a repository that lists its own `coverage.reporter` entries adds to these four.
+
+---
+
+## 🏢 Monorepos
+
+The same three commands serve a single package and a workspace. With no flag they act on the current directory only. In a workspace root they print a hint and still run on the root alone; add `--workspaces` to cover every package.
+
+```sh
+npx cldmv-configs init --workspaces                  # every workspace package
+npx cldmv-configs check --workspaces --root          # every package and the root
+npx cldmv-configs sync --workspaces --dry-run        # preview the ignore-list refresh everywhere
+```
+
+**Finding the packages.** The globs come from `pnpm-workspace.yaml` (`packages:`) or, without that file, from `package.json` `workspaces` (an array, or `{ "packages": [...] }`). The matcher supports `*`, `**` (any depth, including none), trailing `/**` and `!` exclusions, never enters `node_modules`, and keeps only directories that have a `package.json`. The workspace root is added with `--root`. Each package gets its own `.configs/` stubs, ignore file and scripts, and the commands run in each directory in turn.
+
+**Output.** One line per package, with the details of anything that is not `ok` or `kept` indented below it, then a summary line. Exit codes aggregate: any problem in any package makes the exit code `1`. `--json` nests the results per package (`packages[].path`, `.ok`, `.problems`, `.warnings`, `.results`).
+
+**pnpm needs the dependency in every package.** The stubs import `@cldmv/configs`. npm hoists it from the workspace root, but pnpm's strict layout does not, so under pnpm (a `pnpm-lock.yaml` or `pnpm-workspace.yaml` is present) each package must list it itself. `check` reports a missing one as a problem and prints the command; `init` prints it as a hint. Neither runs an install. To add it everywhere at once:
+
+```sh
+pnpm add -D @cldmv/configs@latest -r
+```
+
+or for one package, `pnpm add -D @cldmv/configs@latest --filter @acme/api`. On npm, `check` accepts the dependency in the package or in the workspace root.
+
+**Other options.**
+
+| Option                 | Effect                                                                                                                                                                                                                                                                                                                                 |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ignore-file <path>` | Keep the managed ignore block somewhere other than `.prettierignore`, such as `.configs/.prettierignore`. `init` creates it there and writes the Prettier scripts with `--ignore-path .gitignore --ignore-path <path>` (`--ignore-path` replaces Prettier's defaults, so `.gitignore` is passed too); `check` and `sync` read it there |
+| `--scripts <name>`     | `init` only: `fleet` (default) adds `format` and `format:check`, `prettier` adds `prettier:write` and `prettier:check`. A pair is never added when either of its names already exists, and `check` treats the two pairs as equivalent                                                                                                  |
+| `--root`               | With `--workspaces`, also run in the workspace root                                                                                                                                                                                                                                                                                    |
+
+**Worked example.** A pnpm workspace with two packages, `packages/api` (which already has a `test` script) and `packages/web`:
+
+```text
+acme/
+├── pnpm-workspace.yaml     packages: ["packages/*"]
+├── pnpm-lock.yaml
+├── package.json
+└── packages/
+    ├── api/package.json    "scripts": { "test": "vitest run" }
+    └── web/package.json
+```
+
+```text
+$ npx cldmv-configs init --workspaces --scripts prettier
+packages/api: created 5 file(s), added 6 script(s), kept 1
+  created  .configs/fix-headers.json: created
+  …
+  added    prettier:write: prettier --config .configs/prettier.config.mjs --write .
+  …
+  hint     @cldmv/configs: not installed yet; install it (init never installs): pnpm add -D @cldmv/configs@latest --filter @acme/api
+packages/web: created 5 file(s), added 7 script(s), kept 0
+  …
+2 package(s): 2 ok, 0 with problems (0 problem(s), 0 warning(s))
+2 package(s) lack @cldmv/configs; to add it to every package at once: pnpm add -D @cldmv/configs@latest -r
+
+$ npx cldmv-configs check --workspaces
+packages/api: FAIL (1 problem(s), 1 warning(s))
+  problem  @cldmv/configs: imported by a .configs/ stub but not in this package's dependencies (pnpm does not hoist it into packages); install it: pnpm add -D @cldmv/configs@latest --filter @acme/api
+  warning  test: does not reference .configs/vitest.config.mjs
+packages/web: FAIL (1 problem(s), 0 warning(s))
+  problem  @cldmv/configs: imported by a .configs/ stub but not in this package's dependencies (pnpm does not hoist it into packages); install it: pnpm add -D @cldmv/configs@latest --filter @acme/web
+2 package(s): 0 ok, 2 with problems (2 problem(s), 1 warning(s))
+[exit 1]
+
+$ pnpm add -D @cldmv/configs@latest -r
+$ npx cldmv-configs check --workspaces
+packages/api: ok (0 problem(s), 1 warning(s))
+  warning  test: does not reference .configs/vitest.config.mjs
+packages/web: ok (0 problem(s), 0 warning(s))
+2 package(s): 2 ok, 0 with problems (0 problem(s), 1 warning(s))
+[exit 0]
+```
+
+`api` keeps its own `test` script, so `check` warns that it does not reference the shared Vitest stub; the warning does not fail the check unless `--strict` is passed. A repository with its own shared Vitest helper, as in the [Vitest](#vitest) section, keeps its `test.include` and merges only the base's coverage settings.
 
 ---
 
