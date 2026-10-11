@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:35:47-07:00 (1791747347)
+ *	@Last modified time: 2026-10-11T12:47:00-07:00 (1791748020)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -15,8 +15,8 @@
 
 /**
  * @fileoverview The prettierignore file lists the paths every CLDMV repository
- * keeps out of Prettier, ends with the marker for repository-specific paths,
- * and is what this repository's own format scripts use.
+ * keeps out of Prettier inside a managed block, and this repository's own
+ * `.prettierignore` carries the same block.
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -24,6 +24,19 @@ import { describe, expect, it } from "vitest";
 import { pkg, root } from "./helpers/package.mjs";
 
 const lines = readFileSync(path.join(root, "prettierignore"), "utf8").split("\n");
+const CLOSE = "# <<< @cldmv/configs prettierignore";
+
+/**
+ * The managed block, from the opening marker to the closing marker, with the opening marker's version removed.
+ * @param {string[]} fileLines - Lines of a prettierignore file.
+ * @returns {string[]} The block lines.
+ */
+function managedBlock(fileLines) {
+	const open = fileLines.findIndex((line) => line.startsWith("# >>> @cldmv/configs prettierignore"));
+	const close = fileLines.indexOf(CLOSE);
+	return fileLines.slice(open, close + 1).map((line, index) => (index === 0 ? line.replace(/ v\S+ —/, " —") : line));
+}
+
 const patterns = lines.filter((line) => line.trim() !== "" && !line.startsWith("#"));
 
 describe("prettierignore", () => {
@@ -56,14 +69,20 @@ describe("prettierignore", () => {
 		expect(lines.some((line) => line.startsWith("#") && line.includes("YAML") && line.includes("tabs"))).toBe(true);
 	});
 
-	it("ends with the marker line for repository-specific paths", () => {
-		expect(lines.filter((line) => line !== "").at(-1)).toBe("# --- repository-specific paths below this line ---");
+	it("wraps the shared lines in the managed-block markers and ends with the repo-specific note", () => {
+		const content = lines.filter((line) => line !== "");
+		expect(content[0]).toMatch(
+			/^# >>> @cldmv\/configs prettierignore — managed block, do not edit between the markers; run `npx cldmv-configs sync` to refresh$/
+		);
+		expect(content.filter((line) => line === CLOSE)).toHaveLength(1);
+		expect(content.at(-2)).toBe(CLOSE);
+		expect(content.at(-1)).toMatch(/^# Repo-specific ignores go below this line; they survive every sync\. Use `!path` to re-include/);
 	});
 
-	it("is the start of this repository's own .prettierignore, so editors see the same list", () => {
-		const shipped = readFileSync(path.join(root, "prettierignore"), "utf8");
-		const own = readFileSync(path.join(root, ".prettierignore"), "utf8");
-		expect(own.startsWith(shipped)).toBe(true);
+	it("has a managed region in this repository's own .prettierignore that equals the shipped block", () => {
+		const own = readFileSync(path.join(root, ".prettierignore"), "utf8").split("\n");
+		expect(managedBlock(own)).toEqual(managedBlock(lines));
+		expect(managedBlock(own).length).toBeGreaterThan(10);
 	});
 
 	it("is picked up by Prettier's defaults, with no ignore flags in the format scripts", () => {

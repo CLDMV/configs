@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:31:05-07:00 (1791747065)
+ *	@Last modified time: 2026-10-11T12:46:59-07:00 (1791748019)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -28,6 +28,7 @@ import { pkg, root } from "./helpers/package.mjs";
 const INTENDED_FILES = [
 	"LICENSE",
 	"README.md",
+	"bin/cldmv-configs.mjs",
 	"eslint.config.mjs",
 	"fix-headers.json",
 	"package.json",

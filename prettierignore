@@ -1,7 +1,4 @@
-# CLDMV base Prettier ignore list (@cldmv/configs/prettierignore).
-# Copy this file to .prettierignore, or pass it with --ignore-path, and add the
-# repository's own paths below the marker line at the end.
-
+# >>> @cldmv/configs prettierignore — managed block, do not edit between the markers; run `npx cldmv-configs sync` to refresh
 # Dependencies
 node_modules/
 
@@ -25,5 +22,5 @@ pnpm-lock.yaml
 # Prettier at tabWidth 2 would reindent every workflow for no gain
 *.yml
 *.yaml
-
-# --- repository-specific paths below this line ---
+# <<< @cldmv/configs prettierignore
+# Repo-specific ignores go below this line; they survive every sync. Use `!path` to re-include something the managed block ignores.

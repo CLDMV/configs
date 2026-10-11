@@ -24,7 +24,11 @@
 		"access": "public"
 	},
 	"sideEffects": false,
+	"bin": {
+		"cldmv-configs": "bin/cldmv-configs.mjs"
+	},
 	"files": [
+		"bin/",
 		"eslint.config.mjs",
 		"fix-headers.json",
 		"prettier.json",
@@ -49,7 +53,8 @@
 		"fix-headers",
 		"prettier",
 		"eslint",
-		"vitest"
+		"vitest",
+		"cli"
 	],
 	"exports": {
 		"./eslint.config.mjs": "./eslint.config.mjs",
