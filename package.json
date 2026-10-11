@@ -1,7 +1,7 @@
 {
 	"name": "@cldmv/configs",
-	"version": "1.2.5",
-	"description": "CLDMV's shared tool configurations, published as plain JSON files that CLDMV repos extend.",
+	"version": "1.3.0",
+	"description": "CLDMV's shared tool configurations (ESLint, Prettier, Vitest, fix-headers) that CLDMV repos extend.",
 	"type": "module",
 	"license": "Apache-2.0",
 	"author": {
@@ -24,8 +24,16 @@
 		"access": "public"
 	},
 	"sideEffects": false,
+	"bin": {
+		"cldmv-configs": "bin/cldmv-configs.mjs"
+	},
 	"files": [
+		"bin/",
+		"eslint.config.mjs",
 		"fix-headers.json",
+		"prettier.json",
+		"prettierignore",
+		"vitest.config.mjs",
 		"README.md",
 		"LICENSE"
 	],
@@ -42,11 +50,43 @@
 		"config",
 		"configs",
 		"shared-config",
-		"fix-headers"
+		"fix-headers",
+		"prettier",
+		"eslint",
+		"vitest",
+		"cli"
 	],
 	"exports": {
+		"./eslint.config.mjs": "./eslint.config.mjs",
 		"./fix-headers.json": "./fix-headers.json",
+		"./prettier.json": "./prettier.json",
+		"./prettierignore": "./prettierignore",
+		"./vitest.config.mjs": "./vitest.config.mjs",
 		"./package.json": "./package.json"
+	},
+	"dependencies": {
+		"@cldmv/eslint-plugin-jsonv": "^1.0.16",
+		"@eslint/css": "^2.0.0",
+		"@eslint/js": "^10.0.1",
+		"@eslint/json": "^2.1.1",
+		"@eslint/markdown": "^8.0.3",
+		"globals": "^17.13.0"
+	},
+	"peerDependencies": {
+		"@cldmv/prettier-plugin-jsonv": "^1.1.0",
+		"eslint": "^10.0.0",
+		"vitest": "^4.0.0 || ^5.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@cldmv/prettier-plugin-jsonv": {
+			"optional": true
+		},
+		"eslint": {
+			"optional": true
+		},
+		"vitest": {
+			"optional": true
+		}
 	},
 	"scripts": {
 		"build:ci": "npm run lint && npm run format:check",
@@ -56,24 +96,18 @@
 		"ci:coverage": "npm run coverage",
 		"lint": "eslint --config .configs/eslint.config.mjs .",
 		"lint:fix": "eslint --config .configs/eslint.config.mjs . --fix",
-		"format": "prettier --config .configs/.prettierrc --write .",
-		"format:check": "prettier --config .configs/.prettierrc --check .",
+		"format": "prettier --config .configs/prettier.config.mjs --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --check .",
 		"fix:headers": "fix-headers --config fix-headers.json",
 		"prepare": "node -e \"import('./.githooks/install.mjs').catch(()=>{})\""
 	},
 	"devDependencies": {
-		"@cldmv/eslint-plugin-jsonv": "^1.0.13",
 		"@cldmv/fix-headers": "^2.2.0",
 		"@cldmv/jsonv": "^1.1.1",
 		"@cldmv/prettier-plugin-jsonv": "^1.1.0",
 		"@cldmv/vitest-runner": "^1.5.1",
-		"@eslint/css": "^2.0.0",
-		"@eslint/js": "^10.0.1",
-		"@eslint/json": "^2.1.0",
-		"@eslint/markdown": "^8.0.3",
 		"@vitest/coverage-v8": "^5.0.3",
 		"eslint": "^10.11.0",
-		"globals": "^17.13.0",
 		"prettier": "^3.9.9",
 		"vitest": "^5.0.3"
 	}

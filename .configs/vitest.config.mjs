@@ -7,36 +7,36 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-03T19:43:12-07:00 (1791081792)
+ *	@Last modified time: 2026-10-11T12:31:03-07:00 (1791747063)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
  */
 
-import { defineConfig } from "vitest/config";
+import { defineConfig, mergeConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import base from "../vitest.config.mjs";
 
 // Anchor the project root to the package directory so include/exclude work no
 // matter what cwd vitest is invoked from.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-export default defineConfig({
-	root,
-	test: {
-		include: ["tests/**/*.test.vitest.mjs"],
-		exclude: ["node_modules"],
-		environment: "node",
-		testTimeout: 30000,
-		reporters: ["dot"],
-		coverage: {
-			provider: "v8",
-			// The package ships JSON data only — no executable source — so coverage
-			// has nothing of the package's own to measure. The suite validates the
-			// shipped files directly (parse, option names, exports, pack contents).
-			include: ["*.mjs"],
-			exclude: ["tests/**", ".configs/**", ".githooks/**"],
-			reporter: ["text", "html", "json-summary", "json"]
+export default mergeConfig(
+	base,
+	defineConfig({
+		root,
+		test: {
+			exclude: ["node_modules"],
+			testTimeout: 30000,
+			reporters: ["dot"],
+			coverage: {
+				// The package ships config modules and data files only, so coverage
+				// has little of the package's own to measure. The suite validates the
+				// shipped files directly (parse, option names, exports, pack contents).
+				include: ["*.mjs"],
+				exclude: ["tests/**", ".configs/**", ".githooks/**"]
+			}
 		}
-	}
-});
+	})
+);

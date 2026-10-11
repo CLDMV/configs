@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-03T19:43:16-07:00 (1791081796)
+ *	@Last modified time: 2026-10-11T11:27:43-07:00 (1791743263)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -20,8 +20,9 @@ import { describe, expect, it } from "vitest";
 import { pkg, publishedConfigs, readJson } from "./helpers/package.mjs";
 
 describe("published configs", () => {
-	it("publishes at least the fix-headers config", () => {
+	it("publishes at least the fix-headers and prettier configs", () => {
 		expect(publishedConfigs).toContain("fix-headers.json");
+		expect(publishedConfigs).toContain("prettier.json");
 	});
 
 	it.each(publishedConfigs)("%s parses to a plain JSON object", (file) => {
