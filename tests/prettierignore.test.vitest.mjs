@@ -7,7 +7,7 @@
  *	@Email: <Shinrai@users.noreply.github.com>
  *	-----
  *	@Last modified by: Nate Corcoran <CLDMV> (Shinrai@users.noreply.github.com)
- *	@Last modified time: 2026-10-11T12:31:05-07:00 (1791747065)
+ *	@Last modified time: 2026-10-11T12:35:47-07:00 (1791747347)
  *	-----
  *	@Copyright: Copyright (c) 2013-2026 Catalyzed Motivation Inc. All rights reserved.
  *
@@ -60,8 +60,14 @@ describe("prettierignore", () => {
 		expect(lines.filter((line) => line !== "").at(-1)).toBe("# --- repository-specific paths below this line ---");
 	});
 
-	it("is used by this repository's own format scripts", () => {
-		expect(pkg.scripts.format).toContain("--ignore-path prettierignore");
-		expect(pkg.scripts["format:check"]).toContain("--ignore-path prettierignore");
+	it("is the start of this repository's own .prettierignore, so editors see the same list", () => {
+		const shipped = readFileSync(path.join(root, "prettierignore"), "utf8");
+		const own = readFileSync(path.join(root, ".prettierignore"), "utf8");
+		expect(own.startsWith(shipped)).toBe(true);
+	});
+
+	it("is picked up by Prettier's defaults, with no ignore flags in the format scripts", () => {
+		expect(pkg.scripts.format).not.toContain("--ignore-path");
+		expect(pkg.scripts["format:check"]).not.toContain("--ignore-path");
 	});
 });

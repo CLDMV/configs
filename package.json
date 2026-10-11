@@ -91,8 +91,8 @@
 		"ci:coverage": "npm run coverage",
 		"lint": "eslint --config .configs/eslint.config.mjs .",
 		"lint:fix": "eslint --config .configs/eslint.config.mjs . --fix",
-		"format": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --write .",
-		"format:check": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --check .",
+		"format": "prettier --config .configs/prettier.config.mjs --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --check .",
 		"fix:headers": "fix-headers --config fix-headers.json",
 		"prepare": "node -e \"import('./.githooks/install.mjs').catch(()=>{})\""
 	},

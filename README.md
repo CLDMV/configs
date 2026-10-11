@@ -113,13 +113,13 @@ Point the npm scripts at it:
 ```json
 {
 	"scripts": {
-		"format": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --write .",
-		"format:check": "prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path prettierignore --check ."
+		"format": "prettier --config .configs/prettier.config.mjs --write .",
+		"format:check": "prettier --config .configs/prettier.config.mjs --check ."
 	}
 }
 ```
 
-The `--ignore-path` flags are explained in [Prettier ignore](#prettier-ignore) below.
+Copy the shared ignore list to `.prettierignore` as described in [Prettier ignore](#prettier-ignore) below.
 
 `prettier.json` loads `@cldmv/prettier-plugin-jsonv`, so a repository that formats `.jsonv` files installs that plugin alongside this package. A repository with no `.jsonv` files does not need the plugin: spread the base and drop `plugins` and the jsonv override.
 
@@ -136,13 +136,21 @@ export default {
 Preview the first run before writing anything, then apply it. A first run can reformat many files, so land it when no open pull request touches the same files.
 
 ```sh
-npx prettier --config .configs/prettier.config.mjs --ignore-path .gitignore --ignore-path node_modules/@cldmv/configs/prettierignore --check .
+npx prettier --config .configs/prettier.config.mjs --check .
 npm run format
 ```
 
 ### Prettier ignore
 
-Prettier has no way to extend another ignore file, so the shared list is used in one of two ways. A repository with no ignore rules of its own points Prettier straight at the installed file, in addition to `.gitignore`, which Prettier stops reading once `--ignore-path` is given:
+Prettier has no way to extend another ignore file, so the shared list is used by copying it. This is the default: copy the file to `.prettierignore` once, and append the repository's own paths below the marker line at the end (a repository with nothing to add leaves the file as copied). Prettier reads `.prettierignore` and `.gitignore` on its own, so the npm scripts need no ignore flags, and editors that format on save read the same list:
+
+```sh
+cp node_modules/@cldmv/configs/prettierignore .prettierignore
+```
+
+The copy no longer follows later changes to the shared list. Refresh it by copying again and re-adding the repository's own lines below the marker. This repository keeps its `.prettierignore` the same way, and a test fails if the copy drifts from the shipped file.
+
+The alternative, for a repository with no ignore rules of its own that does not need editor support, is to point Prettier at the installed file in the npm scripts. `--ignore-path` replaces Prettier's defaults, so `.gitignore` is passed explicitly as well:
 
 ```json
 {
@@ -153,13 +161,7 @@ Prettier has no way to extend another ignore file, so the shared list is used in
 }
 ```
 
-A repository with paths of its own copies the file to `.prettierignore` and appends them below the marker line at the end. Prettier reads `.prettierignore` by default, and editors that run Prettier read it too, which the `--ignore-path` form does not give them:
-
-```sh
-cp node_modules/@cldmv/configs/prettierignore .prettierignore
-```
-
-The copy no longer follows later changes to the shared list. Refresh it by copying again and re-adding the repository's own lines below the marker.
+Editors that run Prettier do not see this form, so they ignore nothing from the shared list.
 
 ### ESLint
 
@@ -390,7 +392,7 @@ The file in the repository carries a one-line comment above each group; the list
 | `*.min.*`                             | Minified or compact generated files of any extension (`*.min.js`, `*.min.css`, `*.min.json`); name compact data files `<name>.min.json` |
 | `*.yml`, `*.yaml`                     | CI workflow files are four-space indented and YAML forbids tabs, so Prettier at `tabWidth` 2 would reindent every workflow              |
 
-The file ends with the marker line `# --- repository-specific paths below this line ---`. A repository that copies the file to `.prettierignore` appends its own paths (generated data folders, intentional-error fixtures) after it. See [Prettier ignore](#prettier-ignore) under Quick Start for the copy and `--ignore-path` forms.
+The file ends with the marker line `# --- repository-specific paths below this line ---`. A repository that copies the file to `.prettierignore` appends its own paths (generated data folders, intentional-error fixtures) after it. See [Prettier ignore](#prettier-ignore) under Quick Start for the copy form (the default) and the `--ignore-path` alternative.
 
 ---
 
