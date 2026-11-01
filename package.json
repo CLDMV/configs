@@ -109,6 +109,7 @@
 		"@vitest/coverage-v8": "^5.0.3",
 		"eslint": "^10.11.0",
 		"prettier": "^3.9.9",
+		"vite": "^8.3.5",
 		"vitest": "^5.0.3"
 	}
 }
