@@ -251,6 +251,22 @@ export default mergeConfig(
 
 Run Vitest with `--config .configs/vitest.config.mjs`. `mergeConfig` concatenates arrays, so a repository's `include` or `coverage.reporter` adds to the base entries instead of replacing them.
 
+A package with a `<pkg>-dev` export condition (the one that points `.` at `src/`) adds `devCondition()` so its tests load `src/`:
+
+```js
+import { defineConfig, mergeConfig } from "vitest/config";
+import base, { devCondition } from "@cldmv/configs/vitest.config.mjs";
+
+export default mergeConfig(
+	mergeConfig(base, devCondition({ root: new URL("..", import.meta.url) })),
+	defineConfig({
+		test: {
+			coverage: { include: ["src/**"] }
+		}
+	})
+);
+```
+
 ---
 
 ## 📋 Configs
@@ -457,7 +473,7 @@ There is no HTML block: linting HTML is specific to a few repositories, which ad
 
 ## 🧪 vitest.config.mjs
 
-The module default-exports a plain object with no imports, so it needs nothing installed and can be merged into any Vitest config with `mergeConfig`, as in the [Vitest](#vitest) Quick Start.
+The module default-exports a plain object and imports only Node built-ins, so it needs nothing installed and can be merged into any Vitest config with `mergeConfig`, as in the [Vitest](#vitest) Quick Start.
 
 ```js
 export default {
@@ -496,6 +512,29 @@ export default mergeConfig({ ...base, test }, defineConfig({ test: { include: ["
 ```
 
 Coverage `include` and `exclude` globs, thresholds, `root`, timeouts and reporters are repository-specific and stay in the repository's own config. `mergeConfig` concatenates arrays, so a repository that lists its own `coverage.reporter` entries adds to these four.
+
+### `devCondition()`
+
+A CLDMV library's `exports` has a `<pkg>-dev` condition that points `.` at `src/` instead of `dist/`. Tests run against `src/` through it, which takes the condition in three places. `devCondition()` returns all three, ready to merge:
+
+```js
+devCondition({ root: new URL("..", import.meta.url) });
+// {
+// 	resolve: { conditions: ["wisp-dev", "module", "browser", "development|production"] },
+// 	ssr: { resolve: { conditions: ["wisp-dev", "module", "node", "development|production"] } },
+// 	test: { execArgv: ["--conditions=wisp-dev"] }
+// }
+```
+
+| Setting                  | Why                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolve.conditions`     | Vite's resolver picks `src/` for imports in test files. Setting it replaces Vite's defaults, so they follow the condition (exported as `VITE_CLIENT_CONDITIONS`) |
+| `ssr.resolve.conditions` | The same for Vite's server-side resolver, which Vitest uses for Node tests (`VITE_SERVER_CONDITIONS`)                                                            |
+| `test.execArgv`          | Vitest's worker processes start with `--conditions=<name>`, so Node's own resolver (a `require()`, or anything Vite doesn't load) picks `src/` too               |
+
+`test.nodeOptions` is not a Vitest option; a config that sets it passes nothing to the workers. Use `test.execArgv`, or `devCondition()`.
+
+The argument is the condition name (`devCondition("wisp-dev")`), or `{ name, root }`. With no name, it is read from `<root>/package.json` (`root` defaults to the current directory, and may be a path or a file URL): the one condition ending in `-dev` on the `.` export, otherwise the unscoped package name plus `-dev`. Several `-dev` conditions, or no condition and no name, throw instead of guessing.
 
 ---
 
