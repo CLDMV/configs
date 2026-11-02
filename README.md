@@ -14,19 +14,18 @@ Most of the configs are plain JSON (`fix-headers.json`, `prettier.json`) and one
 
 ## ✨ What's New
 
-### Latest: v1.3.0 (October 2026)
+### Latest: v1.4.0 (November 2026)
 
-- **Four new shared configs** — `prettier.json` (CLDMV's house formatting: tabs, 140 columns, preserved quote props and prose wrapping, the jsonv parser for `.jsonv` files), `prettierignore` (the paths every repository keeps out of Prettier), `eslint.config.mjs` (the fleet's flat ESLint config as an array to spread) and `vitest.config.mjs` (a base settings object to merge). Use them as `@cldmv/configs/prettier.json`, `@cldmv/configs/prettierignore`, `@cldmv/configs/eslint.config.mjs` and `@cldmv/configs/vitest.config.mjs`. This repository now lints, formats and tests itself with the files it publishes.
-- **`cldmv-configs` CLI** — `npx cldmv-configs init` creates the `.configs/` stubs, `.prettierignore` and standard npm scripts without overwriting anything, `check` reports drift (exit `1`) for CI and fleet sweeps, and `sync` refreshes the managed block of `.prettierignore` while leaving the repository's own lines alone. It serves workspace monorepos too: `--workspaces` runs any command in every package (pnpm and npm workspaces), `--ignore-file` moves the ignore block (for example to `.configs/.prettierignore`), `--scripts prettier` names the Prettier scripts `prettier:write` and `prettier:check` (and `check` accepts both naming pairs), and `check` flags a package that imports `@cldmv/configs` without depending on it, which pnpm requires per package.
-- **The package gains dependencies** — the six ESLint plugin packages that `eslint.config.mjs` imports are now regular `dependencies`; `eslint`, `vitest` (4 or 5) and `@cldmv/prettier-plugin-jsonv` are optional peers. `fix-headers.json` is unchanged.
-- [View full v1.3.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md)
+- **`devCondition()` for the `<pkg>-dev` export condition** — `@cldmv/configs/vitest.config.mjs` now also exports `devCondition()`, which returns the `resolve.conditions`, `ssr.resolve.conditions` and `test.execArgv` settings that make a library's tests load `src/` through its `<pkg>-dev` condition. The name comes from the argument or from `package.json`. Hand-copied configs put the worker flag in `test.nodeOptions`, which isn't a Vitest option and never reached the workers; `devCondition()` uses `test.execArgv`, which does ([#39](https://github.com/CLDMV/configs/pull/39)).
+- **Dependency updates** — `@cldmv/eslint-plugin-jsonv` 1.0.17, `@eslint/css` 2.0.1 and `globals` 17.14.0 for consumers, plus dev tooling and patched `vite`, `katex` and `minimatch` in this repository ([#40](https://github.com/CLDMV/configs/pull/40), [#41](https://github.com/CLDMV/configs/pull/41)). No other config changed.
+- [View full v1.4.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.4.0.md)
 
 ### Recent Releases
 
+- **v1.3.0** (October 2026) — four new shared configs (`prettier.json`, `prettierignore`, `eslint.config.mjs`, `vitest.config.mjs`), the `cldmv-configs` CLI with workspace support, and the ESLint plugins as dependencies ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md))
 - **v1.2.5** (October 2026) — dev-tooling refresh only: `eslint` 10.12.0, the jsonv plugins and `@cldmv/vitest-runner` 1.5.2 in this repository's dev dependencies (#24, #25); `fix-headers.json` unchanged ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.5.md))
 - **v1.2.4** (October 2026) — the shared `fix-headers.json` sets `forceLastModifiedAuthorUpdate` to `false`, so `@Last modified by` changes only when a file's content was edited; needs fix-headers 2.2.0 or later (#20) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.4.md))
 - **v1.2.3** (October 2026) — the shared `fix-headers.json` keeps an existing `@Author` (`forceAuthorUpdate: false`, #16), and the repository's own headers are restamped under fix-headers 2.1.4 (#12) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.3.md))
-- **v1.2.2** (October 2026) — the CI `✅ Required PR Check` mirror job runs on every path instead of being skipped on in-repo PRs (#10) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.2.md))
 
 📚 **For complete version history, see [docs/changelog/](https://github.com/CLDMV/configs/tree/master/docs/changelog/) and the [GitHub Releases](https://github.com/CLDMV/configs/releases).**
 
