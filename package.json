@@ -1,6 +1,6 @@
 {
 	"name": "@cldmv/configs",
-	"version": "1.4.0",
+	"version": "1.4.1",
 	"description": "CLDMV's shared tool configurations (ESLint, Prettier, Vitest, fix-headers) that CLDMV repos extend.",
 	"type": "module",
 	"license": "Apache-2.0",
@@ -86,6 +86,13 @@
 		},
 		"vitest": {
 			"optional": true
+		}
+	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=22.22.0",
+			"onFail": "error"
 		}
 	},
 	"scripts": {
