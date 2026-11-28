@@ -1,0 +1,14 @@
+{
+	"version": 1,
+	"commit": "461688215d3c5b7648e6234d6921fd71578f0002",
+	"files": {
+		"eslint.config.mjs": {
+			"withBrowserGlobals": [
+				"tests/eslint.test.vitest.mjs"
+			],
+			"withVitestGlobals": [
+				"tests/eslint.test.vitest.mjs"
+			]
+		}
+	}
+}
