@@ -21,9 +21,53 @@ import markdown from "@eslint/markdown";
 import css from "@eslint/css";
 import { defineConfig } from "eslint/config";
 
+/** The file globs the JavaScript blocks apply to. */
+const SCRIPT_FILES = ["**/*.{js,mjs,cjs}"];
+
+/** The Vitest test-file glob the fleet uses. */
+const VITEST_FILES = ["tests/**/*.test.vitest.mjs"];
+
+/** The globals Vitest defines when its config sets `test.globals: true`. */
+const VITEST_GLOBALS = Object.freeze({
+	afterAll: "readonly",
+	afterEach: "readonly",
+	beforeAll: "readonly",
+	beforeEach: "readonly",
+	describe: "readonly",
+	expect: "readonly",
+	it: "readonly",
+	test: "readonly",
+	vi: "readonly"
+});
+
+/**
+ * An opt-in block that adds the browser globals (`window`, `document`, `self`, ...) to the given files. The base
+ * declares only the Node globals, so a repository that ships browser code spreads this for that code's globs:
+ * `export default [...base, withBrowserGlobals(["src/browser/**\/*.mjs"])];`
+ * @param {string[]} [files] - The files that run in a browser. Defaults to every script file.
+ * @returns {import("eslint").Linter.Config} The block.
+ */
+export function withBrowserGlobals(files = SCRIPT_FILES) {
+	return { name: "cldmv/browser-globals", files, languageOptions: { globals: { ...globals.browser } } };
+}
+
+/**
+ * An opt-in block that declares the Vitest globals for the given test files, for a repository whose Vitest config
+ * sets `test.globals: true`. Without it a test must import `describe`, `it`, `expect` and the rest from `vitest`:
+ * `export default [...base, withVitestGlobals()];`
+ * @param {string[]} [files] - The test files. Defaults to `tests/**\/*.test.vitest.mjs`.
+ * @returns {import("eslint").Linter.Config} The block.
+ */
+export function withVitestGlobals(files = VITEST_FILES) {
+	return { name: "cldmv/vitest-globals", files, languageOptions: { globals: { ...VITEST_GLOBALS } } };
+}
+
 /**
  * CLDMV's base ESLint flat config, exported as an array so a repository spreads it and appends its own blocks:
  * `export default [...base, { files: [...], rules: {...} }];`
+ *
+ * Scripts get the Node globals only. Browser and Vitest globals are opt-in through `withBrowserGlobals()` and
+ * `withVitestGlobals()`, and the repository's own `.configs/` files are linted like any other script.
  */
 export default defineConfig([
 	{
@@ -34,7 +78,6 @@ export default defineConfig([
 			"dist/**",
 			"build/**",
 			".git/**",
-			".configs/**",
 			".vscode/**",
 			"coverage/**",
 			"*.min.*",
@@ -55,7 +98,7 @@ export default defineConfig([
 		]
 	},
 	{
-		files: ["**/*.{js,mjs,cjs}"],
+		files: SCRIPT_FILES,
 		plugins: { js },
 		extends: ["js/recommended"],
 		rules: {
@@ -71,23 +114,7 @@ export default defineConfig([
 		}
 	},
 	{ files: ["**/*.js"], languageOptions: { sourceType: "commonjs" } },
-	{ files: ["**/*.{js,mjs,cjs}"], languageOptions: { globals: { ...globals.node, ...globals.browser } } },
-	{
-		files: ["tests/**/*.test.vitest.mjs"],
-		languageOptions: {
-			globals: {
-				beforeAll: true,
-				beforeEach: true,
-				afterAll: true,
-				afterEach: true,
-				describe: true,
-				it: true,
-				expect: true,
-				test: true,
-				vi: true
-			}
-		}
-	},
+	{ files: SCRIPT_FILES, languageOptions: { globals: { ...globals.node } } },
 	{ files: ["**/*.json"], plugins: { json }, language: "json/json", extends: ["json/recommended"] },
 	{ files: ["**/*.jsonc"], plugins: { json }, language: "json/jsonc", extends: ["json/recommended"] },
 	{ files: ["**/*.json5"], plugins: { json }, language: "json/json5", extends: ["json/recommended"] },
