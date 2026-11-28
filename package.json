@@ -1,6 +1,6 @@
 {
 	"name": "@cldmv/configs",
-	"version": "1.4.0",
+	"version": "1.5.0",
 	"description": "CLDMV's shared tool configurations (ESLint, Prettier, Vitest, fix-headers) that CLDMV repos extend.",
 	"type": "module",
 	"license": "Apache-2.0",
@@ -65,7 +65,7 @@
 		"./package.json": "./package.json"
 	},
 	"dependencies": {
-		"@cldmv/eslint-plugin-jsonv": "^1.0.17",
+		"@cldmv/eslint-plugin-jsonv": "^2.0.0",
 		"@eslint/css": "^2.0.1",
 		"@eslint/js": "^10.0.1",
 		"@eslint/json": "^2.1.1",
@@ -88,6 +88,13 @@
 			"optional": true
 		}
 	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=22.22.0",
+			"onFail": "error"
+		}
+	},
 	"scripts": {
 		"build:ci": "npm run lint && npm run format:check",
 		"test": "node tests/run-vitest.mjs",
@@ -102,10 +109,10 @@
 		"prepare": "node -e \"import('./.githooks/install.mjs').catch(()=>{})\""
 	},
 	"devDependencies": {
-		"@cldmv/fix-headers": "^2.2.4",
-		"@cldmv/jsonv": "^1.1.5",
-		"@cldmv/prettier-plugin-jsonv": "^1.1.4",
-		"@cldmv/vitest-runner": "^1.5.6",
+		"@cldmv/fix-headers": "^2.6.0",
+		"@cldmv/jsonv": "^1.2.3",
+		"@cldmv/prettier-plugin-jsonv": "^1.2.3",
+		"@cldmv/vitest-runner": "^1.11.3",
 		"@vitest/coverage-v8": "^5.0.5",
 		"eslint": "^10.14.0",
 		"prettier": "^3.9.9",
