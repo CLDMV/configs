@@ -14,18 +14,18 @@ Most of the configs are plain JSON (`fix-headers.json`, `prettier.json`) and one
 
 ## ✨ What's New
 
-### Latest: v1.4.0 (November 2026)
+### Latest: v1.5.0 (November 2026)
 
-- **`devCondition()` for the `<pkg>-dev` export condition** — `@cldmv/configs/vitest.config.mjs` now also exports `devCondition()`, which returns the `resolve.conditions`, `ssr.resolve.conditions` and `test.execArgv` settings that make a library's tests load `src/` through its `<pkg>-dev` condition. The name comes from the argument or from `package.json`. Hand-copied configs put the worker flag in `test.nodeOptions`, which isn't a Vitest option and never reached the workers; `devCondition()` uses `test.execArgv`, which does ([#39](https://github.com/CLDMV/configs/pull/39)).
-- **Dependency updates** — `@cldmv/eslint-plugin-jsonv` 1.0.17, `@eslint/css` 2.0.1 and `globals` 17.14.0 for consumers, plus dev tooling and patched `vite`, `katex` and `minimatch` in this repository ([#40](https://github.com/CLDMV/configs/pull/40), [#41](https://github.com/CLDMV/configs/pull/41)). No other config changed.
-- [View full v1.4.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.4.0.md)
+- **Node-only ESLint base** — `eslint.config.mjs` now declares the Node globals only, so browser globals in Node code and un-imported Vitest globals in tests are reported. Two named exports add them back where a repository has them, `withBrowserGlobals(files?)` and `withVitestGlobals(files?)`, and `.configs/` files are linted too. Expect new `no-undef` findings after updating ([#58](https://github.com/CLDMV/configs/pull/58)).
+- **Dev floor in `devEngines` and `@cldmv/eslint-plugin-jsonv` 2** — the 22.22.0 toolchain floor is declared in `devEngines` (still no runtime `engines`), and the jsonv ESLint plugin dependency moves to `^2.0.0` ([#45](https://github.com/CLDMV/configs/pull/45), [#59](https://github.com/CLDMV/configs/pull/59)).
+- [View full v1.5.0 Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.5.0.md)
 
 ### Recent Releases
 
+- **v1.4.0** (November 2026) — `devCondition()` in `vitest.config.mjs` for the `<pkg>-dev` export condition, plus dependency updates ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.4.0.md))
 - **v1.3.0** (October 2026) — four new shared configs (`prettier.json`, `prettierignore`, `eslint.config.mjs`, `vitest.config.mjs`), the `cldmv-configs` CLI with workspace support, and the ESLint plugins as dependencies ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.3.0.md))
 - **v1.2.5** (October 2026) — dev-tooling refresh only: `eslint` 10.12.0, the jsonv plugins and `@cldmv/vitest-runner` 1.5.2 in this repository's dev dependencies (#24, #25); `fix-headers.json` unchanged ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.5.md))
 - **v1.2.4** (October 2026) — the shared `fix-headers.json` sets `forceLastModifiedAuthorUpdate` to `false`, so `@Last modified by` changes only when a file's content was edited; needs fix-headers 2.2.0 or later (#20) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.4.md))
-- **v1.2.3** (October 2026) — the shared `fix-headers.json` keeps an existing `@Author` (`forceAuthorUpdate: false`, #16), and the repository's own headers are restamped under fix-headers 2.1.4 (#12) ([Changelog](https://github.com/CLDMV/configs/blob/master/docs/changelog/v1/v1.2.3.md))
 
 📚 **For complete version history, see [docs/changelog/](https://github.com/CLDMV/configs/tree/master/docs/changelog/) and the [GitHub Releases](https://github.com/CLDMV/configs/releases).**
 
